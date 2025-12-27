@@ -9,11 +9,13 @@ let focusedEditor = null;  // 追蹤目前正在編輯的組別
 // 執行程式碼
 function runCode(groupId) {
     const codeEditor = document.getElementById(`code-${groupId}`);
+    const inputArea = document.getElementById(`input-${groupId}`);
     const outputArea = document.getElementById(`output-${groupId}`);
     const statusBar = document.getElementById(`status-${groupId}`);
     const runBtn = document.querySelector(`#group-${groupId} .btn-run`);
 
     const code = codeEditor.value;
+    const userInput = inputArea ? inputArea.value : '';
 
     if (!code.trim()) {
         outputArea.textContent = '[提示] 請先輸入程式碼！';
@@ -31,7 +33,7 @@ function runCode(groupId) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ code: code })
+        body: JSON.stringify({ code: code, user_input: userInput })
     })
     .then(response => response.json())
     .then(data => {
@@ -58,6 +60,7 @@ function clearGroup(groupId) {
     }
 
     const codeEditor = document.getElementById(`code-${groupId}`);
+    const inputArea = document.getElementById(`input-${groupId}`);
     const outputArea = document.getElementById(`output-${groupId}`);
     const statusBar = document.getElementById(`status-${groupId}`);
 
@@ -67,6 +70,7 @@ function clearGroup(groupId) {
     .then(response => response.json())
     .then(data => {
         codeEditor.value = '';
+        if (inputArea) inputArea.value = '';
         outputArea.textContent = '';
         statusBar.textContent = '尚未執行';
     })
@@ -83,13 +87,19 @@ function refreshAllData() {
             for (let groupId = 1; groupId <= 6; groupId++) {
                 const group = data[groupId];
                 const codeEditor = document.getElementById(`code-${groupId}`);
+                const inputArea = document.getElementById(`input-${groupId}`);
                 const outputArea = document.getElementById(`output-${groupId}`);
                 const taskArea = document.getElementById(`task-${groupId}`);
                 const statusBar = document.getElementById(`status-${groupId}`);
 
                 // 只更新非目前正在編輯的組別
-                if (focusedEditor !== groupId && codeEditor) {
-                    codeEditor.value = group.code || '';
+                if (focusedEditor !== groupId) {
+                    if (codeEditor) {
+                        codeEditor.value = group.code || '';
+                    }
+                    if (inputArea) {
+                        inputArea.value = group.user_input || '';
+                    }
                 }
 
                 if (outputArea) {

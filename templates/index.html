@@ -40,6 +40,11 @@
                 <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼...">{{ groups_data[group_id].code }}</textarea>
             </div>
 
+            <div class="input-container">
+                <label for="input-{{ group_id }}">輸入資料（每行一個 input）：</label>
+                <textarea id="input-{{ group_id }}" class="input-area" placeholder="程式需要 input() 時，在這裡輸入資料&#10;每行對應一次 input() 呼叫">{{ groups_data[group_id].user_input if groups_data[group_id].user_input else '' }}</textarea>
+            </div>
+
             <div class="output-container">
                 <label>執行結果：</label>
                 <pre id="output-{{ group_id }}" class="output-area">{{ groups_data[group_id].output }}</pre>

@@ -17,12 +17,12 @@ real_app = Flask(__name__)
 
 # 儲存各組的程式碼和執行結果
 groups_data = {
-    1: {"code": "", "output": "", "task": "", "last_run": None},
-    2: {"code": "", "output": "", "task": "", "last_run": None},
-    3: {"code": "", "output": "", "task": "", "last_run": None},
-    4: {"code": "", "output": "", "task": "", "last_run": None},
-    5: {"code": "", "output": "", "task": "", "last_run": None},
-    6: {"code": "", "output": "", "task": "", "last_run": None},
+    1: {"code": "", "output": "", "task": "", "last_run": None, "user_input": ""},
+    2: {"code": "", "output": "", "task": "", "last_run": None, "user_input": ""},
+    3: {"code": "", "output": "", "task": "", "last_run": None, "user_input": ""},
+    4: {"code": "", "output": "", "task": "", "last_run": None, "user_input": ""},
+    5: {"code": "", "output": "", "task": "", "last_run": None, "user_input": ""},
+    6: {"code": "", "output": "", "task": "", "last_run": None, "user_input": ""},
 }
 
 # 預設任務列表
@@ -54,9 +54,11 @@ def run_code(group_id):
 
     data = request.get_json()
     code = data.get("code", "")
+    user_input = data.get("user_input", "")
 
-    # 儲存程式碼
+    # 儲存程式碼和輸入
     groups_data[group_id]["code"] = code
+    groups_data[group_id]["user_input"] = user_input
     groups_data[group_id]["last_run"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # 建立暫存檔案執行程式碼
@@ -66,8 +68,10 @@ def run_code(group_id):
             temp_file = f.name
 
         # 執行程式碼，設定超時時間為 10 秒
+        # 將 user_input 作為標準輸入傳給程式
         result = subprocess.run(
             [sys.executable, temp_file],
+            input=user_input,
             capture_output=True,
             text=True,
             timeout=10,
@@ -155,6 +159,7 @@ def clear_group(group_id):
 
     groups_data[group_id]["code"] = ""
     groups_data[group_id]["output"] = ""
+    groups_data[group_id]["user_input"] = ""
     groups_data[group_id]["last_run"] = None
 
     return jsonify({"message": "已清除"})

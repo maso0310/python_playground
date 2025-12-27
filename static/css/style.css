@@ -233,6 +233,43 @@ nav a:hover, nav a.active {
     border-color: var(--secondary-color);
 }
 
+.input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.input-container label {
+    font-weight: bold;
+    color: var(--dark-color);
+    font-size: 0.85rem;
+}
+
+.input-area {
+    width: 100%;
+    height: 60px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    padding: 0.5rem;
+    border: 2px solid #f39c12;
+    border-radius: var(--border-radius);
+    resize: vertical;
+    background: #fffbf0;
+    color: #333;
+    line-height: 1.4;
+}
+
+.input-area:focus {
+    outline: none;
+    border-color: #e67e22;
+    background: #fff;
+}
+
+.input-area::placeholder {
+    color: #aaa;
+    font-size: 12px;
+}
+
 .output-container {
     display: flex;
     flex-direction: column;
