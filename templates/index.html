@@ -40,59 +40,63 @@
                 <span class="completed-badge" id="badge-{{ group_id }}">0 / 6 題</span>
             </div>
 
-            <!-- 題目列表區域 -->
             <div class="tasks-area" id="tasks-area-{{ group_id }}">
-                <div class="tasks-grid">
-                    {% for task_id, task_text in group_tasks[group_id].items() %}
-                    <div class="task-card" id="task-card-{{ group_id }}-{{ task_id }}"
-                         onclick="selectTask({{ group_id }}, {{ task_id }})">
-                        <div class="task-number">題目 {{ task_id }}</div>
-                        <div class="task-desc">{{ task_text }}</div>
-                        <div class="task-status" id="task-status-{{ group_id }}-{{ task_id }}">
-                            <span class="status-pending">未完成</span>
+                {% for task_id, task_text in group_tasks[group_id].items() %}
+                <div class="task-item" id="task-item-{{ group_id }}-{{ task_id }}">
+                    <!-- 題目標題（可點擊展開） -->
+                    <div class="task-header-bar" id="task-header-{{ group_id }}-{{ task_id }}"
+                         onclick="toggleTask({{ group_id }}, {{ task_id }})">
+                        <div class="task-header-left">
+                            <span class="task-number">題目 {{ task_id }}</span>
+                            <span class="task-status-icon" id="status-icon-{{ group_id }}-{{ task_id }}"></span>
                         </div>
+                        <span class="task-toggle-icon" id="toggle-icon-{{ group_id }}-{{ task_id }}">展開</span>
                     </div>
-                    {% endfor %}
-                </div>
-            </div>
 
-            <!-- 程式編輯區域 -->
-            <div class="editor-area" id="editor-area-{{ group_id }}" style="display: none;">
-                <div class="current-task-display">
-                    <span class="task-label">目前題目：</span>
-                    <span class="task-text" id="current-task-text-{{ group_id }}"></span>
-                </div>
-
-                <div class="editor-wrapper">
-                    <div class="editor-header">
-                        <span>程式碼</span>
-                        <div class="editor-actions">
-                            <button class="btn btn-run" onclick="runCode({{ group_id }})">執行</button>
-                            <button class="btn btn-clear" onclick="clearCode({{ group_id }})">清除</button>
+                    <!-- 題目內容（展開後顯示） -->
+                    <div class="task-content" id="task-content-{{ group_id }}-{{ task_id }}" style="display: none;">
+                        <div class="task-description">
+                            <strong>題目：</strong>{{ task_text }}
                         </div>
-                    </div>
-                    <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼..."></textarea>
-                </div>
 
-                <div class="output-wrapper">
-                    <div class="output-header">
-                        <span>執行結果</span>
-                        <span class="last-run" id="last-run-{{ group_id }}"></span>
-                    </div>
-                    <pre id="output-{{ group_id }}" class="output-area"></pre>
-                </div>
+                        <div class="editor-section">
+                            <div class="editor-toolbar">
+                                <span class="toolbar-label">程式碼</span>
+                                <div class="toolbar-actions">
+                                    <button class="btn btn-run" onclick="runCode({{ group_id }}, {{ task_id }}); event.stopPropagation();">執行</button>
+                                    <button class="btn btn-clear" onclick="clearCode({{ group_id }}, {{ task_id }}); event.stopPropagation();">清除</button>
+                                </div>
+                            </div>
+                            <textarea id="code-{{ group_id }}-{{ task_id }}"
+                                      class="code-editor"
+                                      placeholder="在這裡輸入 Python 程式碼..."
+                                      onclick="event.stopPropagation();"></textarea>
+                        </div>
 
-                <button class="btn btn-back" onclick="backToTasks({{ group_id }})">返回題目列表</button>
+                        <div class="output-section">
+                            <div class="output-toolbar">
+                                <span class="toolbar-label">執行結果</span>
+                                <span class="last-run-time" id="last-run-{{ group_id }}-{{ task_id }}"></span>
+                            </div>
+                            <pre id="output-{{ group_id }}-{{ task_id }}" class="output-area"></pre>
+                        </div>
+
+                        <button class="btn btn-collapse" onclick="collapseTask({{ group_id }}, {{ task_id }}); event.stopPropagation();">
+                            收起題目
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </section>
         {% endfor %}
     </main>
 
     <script>
-        // 儲存當前各組選擇的題目
-        const groupState = {};
+        // 追蹤各組當前展開的題目
+        const expandedTasks = {};
         for (let i = 1; i <= 6; i++) {
-            groupState[i] = { taskId: null };
+            expandedTasks[i] = null;
         }
 
         // 滾動到指定組別
@@ -103,38 +107,104 @@
             }
         }
 
-        // 選擇題目
-        function selectTask(groupId, taskId) {
-            groupState[groupId].taskId = taskId;
+        // 切換題目展開/收起
+        function toggleTask(groupId, taskId) {
+            const currentExpanded = expandedTasks[groupId];
+
+            if (currentExpanded === taskId) {
+                // 如果點擊的是當前展開的題目，收起它
+                collapseTask(groupId, taskId);
+            } else {
+                // 先收起之前展開的題目
+                if (currentExpanded !== null) {
+                    collapseTaskUI(groupId, currentExpanded);
+                }
+                // 展開新題目
+                expandTask(groupId, taskId);
+            }
+        }
+
+        // 展開題目
+        function expandTask(groupId, taskId) {
+            expandedTasks[groupId] = taskId;
 
             // 載入題目資料
             fetch(`/python_playground/get_task/${groupId}/${taskId}`)
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById(`current-task-text-${groupId}`).textContent = data.task;
-                    document.getElementById(`code-${groupId}`).value = data.code || '';
-                    document.getElementById(`output-${groupId}`).textContent = data.output || '';
-                    document.getElementById(`last-run-${groupId}`).textContent =
+                    document.getElementById(`code-${groupId}-${taskId}`).value = data.code || '';
+                    document.getElementById(`output-${groupId}-${taskId}`).textContent = data.output || '';
+                    document.getElementById(`last-run-${groupId}-${taskId}`).textContent =
                         data.last_run ? `最後執行: ${data.last_run}` : '';
 
-                    document.getElementById(`tasks-area-${groupId}`).style.display = 'none';
-                    document.getElementById(`editor-area-${groupId}`).style.display = 'block';
+                    // 更新狀態圖示
+                    updateStatusIcon(groupId, taskId, !!data.last_run);
                 });
-        }
 
-        // 返回題目列表
-        function backToTasks(groupId) {
-            // 自動儲存
-            const code = document.getElementById(`code-${groupId}`).value;
-            if (code.trim() && groupState[groupId].taskId) {
-                saveCode(groupId);
+            // 隱藏其他題目，展開當前題目
+            for (let i = 1; i <= 6; i++) {
+                const item = document.getElementById(`task-item-${groupId}-${i}`);
+                const content = document.getElementById(`task-content-${groupId}-${i}`);
+                const toggleIcon = document.getElementById(`toggle-icon-${groupId}-${i}`);
+
+                if (i === taskId) {
+                    item.classList.add('expanded');
+                    content.style.display = 'block';
+                    toggleIcon.textContent = '收起';
+                } else {
+                    item.classList.add('collapsed');
+                    item.classList.remove('expanded');
+                    content.style.display = 'none';
+                    toggleIcon.textContent = '展開';
+                }
             }
 
-            document.getElementById(`tasks-area-${groupId}`).style.display = 'block';
-            document.getElementById(`editor-area-${groupId}`).style.display = 'none';
+            // 滾動到展開的題目
+            setTimeout(() => {
+                const item = document.getElementById(`task-item-${groupId}-${taskId}`);
+                item.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
 
-            // 重新載入題目狀態
+        // 收起題目
+        function collapseTask(groupId, taskId) {
+            // 自動儲存
+            const code = document.getElementById(`code-${groupId}-${taskId}`).value;
+            if (code.trim()) {
+                saveCode(groupId, taskId);
+            }
+
+            collapseTaskUI(groupId, taskId);
+            expandedTasks[groupId] = null;
+
+            // 重新載入所有題目狀態
             loadGroupTaskStatus(groupId);
+        }
+
+        // 收起題目的 UI 變化
+        function collapseTaskUI(groupId, taskId) {
+            // 顯示所有題目
+            for (let i = 1; i <= 6; i++) {
+                const item = document.getElementById(`task-item-${groupId}-${i}`);
+                const content = document.getElementById(`task-content-${groupId}-${i}`);
+                const toggleIcon = document.getElementById(`toggle-icon-${groupId}-${i}`);
+
+                item.classList.remove('expanded', 'collapsed');
+                content.style.display = 'none';
+                toggleIcon.textContent = '展開';
+            }
+        }
+
+        // 更新狀態圖示
+        function updateStatusIcon(groupId, taskId, isCompleted) {
+            const icon = document.getElementById(`status-icon-${groupId}-${taskId}`);
+            if (isCompleted) {
+                icon.innerHTML = '<span class="status-done-dot"></span>';
+                icon.title = '已完成';
+            } else {
+                icon.innerHTML = '';
+                icon.title = '';
+            }
         }
 
         // 載入組別所有題目的狀態
@@ -143,27 +213,15 @@
                 fetch(`/python_playground/get_task/${groupId}/${taskId}`)
                     .then(response => response.json())
                     .then(data => {
-                        const statusEl = document.getElementById(`task-status-${groupId}-${taskId}`);
-                        const cardEl = document.getElementById(`task-card-${groupId}-${taskId}`);
-
-                        if (data.last_run) {
-                            statusEl.innerHTML = `<span class="status-done">已完成</span>`;
-                            cardEl.classList.add('completed');
-                        } else {
-                            statusEl.innerHTML = `<span class="status-pending">未完成</span>`;
-                            cardEl.classList.remove('completed');
-                        }
+                        updateStatusIcon(groupId, taskId, !!data.last_run);
                     });
             }
         }
 
         // 執行程式碼
-        function runCode(groupId) {
-            const taskId = groupState[groupId].taskId;
-            if (!taskId) return;
-
-            const code = document.getElementById(`code-${groupId}`).value;
-            const outputArea = document.getElementById(`output-${groupId}`);
+        function runCode(groupId, taskId) {
+            const code = document.getElementById(`code-${groupId}-${taskId}`).value;
+            const outputArea = document.getElementById(`output-${groupId}-${taskId}`);
 
             if (!code.trim()) {
                 outputArea.textContent = '[提示] 請先輸入程式碼！';
@@ -180,8 +238,9 @@
             .then(response => response.json())
             .then(data => {
                 outputArea.textContent = data.output || '（無輸出）';
-                document.getElementById(`last-run-${groupId}`).textContent =
+                document.getElementById(`last-run-${groupId}-${taskId}`).textContent =
                     `最後執行: ${data.last_run}`;
+                updateStatusIcon(groupId, taskId, true);
                 updateGroupBadge(groupId);
             })
             .catch(error => {
@@ -190,11 +249,8 @@
         }
 
         // 儲存程式碼
-        function saveCode(groupId) {
-            const taskId = groupState[groupId].taskId;
-            if (!taskId) return;
-
-            const code = document.getElementById(`code-${groupId}`).value;
+        function saveCode(groupId, taskId) {
+            const code = document.getElementById(`code-${groupId}-${taskId}`).value;
 
             fetch(`/python_playground/save/${groupId}/${taskId}`, {
                 method: 'POST',
@@ -204,11 +260,11 @@
         }
 
         // 清除程式碼
-        function clearCode(groupId) {
+        function clearCode(groupId, taskId) {
             if (!confirm('確定要清除程式碼嗎？')) return;
 
-            document.getElementById(`code-${groupId}`).value = '';
-            document.getElementById(`output-${groupId}`).textContent = '';
+            document.getElementById(`code-${groupId}-${taskId}`).value = '';
+            document.getElementById(`output-${groupId}-${taskId}`).textContent = '';
         }
 
         // 更新組別完成數量徽章
@@ -243,31 +299,35 @@
             if (event.ctrlKey && event.key === 'Enter') {
                 const activeElement = document.activeElement;
                 if (activeElement && activeElement.classList.contains('code-editor')) {
-                    const groupId = parseInt(activeElement.id.replace('code-', ''));
-                    runCode(groupId);
+                    const parts = activeElement.id.split('-');
+                    const groupId = parseInt(parts[1]);
+                    const taskId = parseInt(parts[2]);
+                    runCode(groupId, taskId);
                 }
             }
         });
 
         // Tab 鍵支援
-        document.querySelectorAll('.code-editor').forEach(editor => {
-            editor.addEventListener('keydown', function(event) {
-                if (event.key === 'Tab') {
-                    event.preventDefault();
-                    const start = this.selectionStart;
-                    const end = this.selectionEnd;
-                    this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
-                    this.selectionStart = this.selectionEnd = start + 4;
-                }
-            });
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Tab' && event.target.classList.contains('code-editor')) {
+                event.preventDefault();
+                const editor = event.target;
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 4;
+            }
         });
 
         // 自動儲存（每 30 秒）
         setInterval(function() {
             for (let groupId = 1; groupId <= 6; groupId++) {
-                const code = document.getElementById(`code-${groupId}`).value;
-                if (code.trim() && groupState[groupId].taskId) {
-                    saveCode(groupId);
+                const taskId = expandedTasks[groupId];
+                if (taskId) {
+                    const code = document.getElementById(`code-${groupId}-${taskId}`).value;
+                    if (code.trim()) {
+                        saveCode(groupId, taskId);
+                    }
                 }
             }
         }, 30000);
