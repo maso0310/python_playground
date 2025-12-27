@@ -40,13 +40,16 @@
             <!-- 題目列表（預設顯示） -->
             <div class="tasks-list" id="tasks-list-{{ group_id }}">
                 {% for task_id, task_text in group_tasks[group_id].items() %}
-                <div class="task-card" id="task-card-{{ group_id }}-{{ task_id }}"
-                     onclick="openEditor({{ group_id }}, {{ task_id }})">
+                <div class="task-card" id="task-card-{{ group_id }}-{{ task_id }}">
                     <div class="task-card-header">
                         <span class="task-number">題目 {{ task_id }}</span>
                         <span class="task-status" id="task-status-{{ group_id }}-{{ task_id }}">未完成</span>
                     </div>
-                    <div class="task-desc">{{ task_text }}</div>
+                    <div class="task-desc" onclick="openEditor({{ group_id }}, {{ task_id }})">{{ task_text }}</div>
+                    <div class="task-card-actions">
+                        <button class="btn btn-copy" onclick="copyTask({{ group_id }}, {{ task_id }}, event)">複製題目</button>
+                        <button class="btn btn-start" onclick="openEditor({{ group_id }}, {{ task_id }})">開始作答</button>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -61,7 +64,10 @@
                     <button class="btn btn-back-menu" onclick="closeEditor({{ group_id }})">返回選單</button>
                 </div>
 
-                <div class="editor-task-desc" id="editor-task-desc-{{ group_id }}"></div>
+                <div class="editor-task-container">
+                    <div class="editor-task-desc" id="editor-task-desc-{{ group_id }}"></div>
+                    <button class="btn btn-copy-small" onclick="copyCurrentTask({{ group_id }})" title="複製題目去問 AI">複製題目</button>
+                </div>
 
                 <div class="editor-main">
                     <div class="editor-code-section">
@@ -94,6 +100,49 @@
 
         // 題目資料
         const groupTasks = {{ group_tasks | tojson }};
+
+        // 複製題目到剪貼板
+        function copyTask(groupId, taskId, event) {
+            if (event) event.stopPropagation();
+
+            const taskText = groupTasks[groupId][taskId];
+            const prompt = `請幫我用 Python 完成以下題目：\n\n${taskText}\n\n請提供完整的程式碼和執行結果。`;
+
+            navigator.clipboard.writeText(prompt).then(() => {
+                showCopyFeedback(event ? event.target : null, '已複製！');
+            }).catch(err => {
+                // fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = prompt;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showCopyFeedback(event ? event.target : null, '已複製！');
+            });
+        }
+
+        // 複製當前編輯器的題目
+        function copyCurrentTask(groupId) {
+            if (currentEditor.taskId) {
+                copyTask(groupId, currentEditor.taskId, null);
+                const btn = document.querySelector(`#editor-${groupId} .btn-copy-small`);
+                showCopyFeedback(btn, '已複製！');
+            }
+        }
+
+        // 顯示複製成功的反饋
+        function showCopyFeedback(button, message) {
+            if (button) {
+                const originalText = button.textContent;
+                button.textContent = message;
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 1500);
+            }
+        }
 
         // 滾動到指定組別
         function scrollToGroup(groupId) {
