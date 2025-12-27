@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者 - Python Playground</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Python Playground</h1>
+        <p>管理者頁面 - 任務指派</p>
+        <nav>
+            <a href="/">練習區</a>
+            <a href="/showcase">成果展示</a>
+            <a href="/admin" class="active">管理者</a>
+        </nav>
+    </header>
+
+    <main class="admin-container">
+        <section class="admin-section">
+            <h2>快速指派相同任務給所有組別</h2>
+            <div class="quick-assign">
+                <textarea id="quick-task" placeholder="輸入要指派給所有組別的任務..."></textarea>
+                <button class="btn btn-primary" onclick="assignToAll()">指派給所有組別</button>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>預設任務範本</h2>
+            <div class="task-templates">
+                <button class="btn btn-template" onclick="useTemplate(1)">基礎運算</button>
+                <button class="btn btn-template" onclick="useTemplate(2)">迴圈練習</button>
+                <button class="btn btn-template" onclick="useTemplate(3)">條件判斷</button>
+                <button class="btn btn-template" onclick="useTemplate(4)">字串處理</button>
+                <button class="btn btn-template" onclick="useTemplate(5)">列表操作</button>
+                <button class="btn btn-template" onclick="useTemplate(6)">函式練習</button>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>個別組別任務指派</h2>
+            <div class="individual-tasks">
+                {% for group_id in range(1, 7) %}
+                <div class="task-card">
+                    <div class="task-header">
+                        <h3>第 {{ group_id }} 組</h3>
+                        <button class="btn btn-small btn-save" onclick="saveTask({{ group_id }})">儲存</button>
+                    </div>
+                    <textarea id="admin-task-{{ group_id }}" class="task-input">{{ groups_data[group_id].task }}</textarea>
+                    <div class="task-status">
+                        <span>程式碼: {{ '已撰寫' if groups_data[group_id].code else '尚未撰寫' }}</span>
+                        <span>執行: {{ groups_data[group_id].last_run if groups_data[group_id].last_run else '尚未執行' }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <h2>批次操作</h2>
+            <div class="batch-actions">
+                <button class="btn btn-danger" onclick="clearAllGroups()">清除所有組別的程式碼</button>
+                <button class="btn btn-primary" onclick="saveAllTasks()">儲存所有任務</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const taskTemplates = {
+            1: {
+                1: "請寫一個程式，計算 1 到 100 的總和",
+                2: "請寫一個程式，計算兩個數字的四則運算結果",
+                3: "請寫一個程式，計算圓的面積（半徑由使用者輸入）",
+                4: "請寫一個程式，將華氏溫度轉換為攝氏溫度",
+                5: "請寫一個程式，計算 BMI 指數",
+                6: "請寫一個程式，計算複利"
+            },
+            2: {
+                1: "請寫一個程式，印出九九乘法表",
+                2: "請寫一個程式，印出 1 到 100 之間的偶數",
+                3: "請寫一個程式，計算階乘 (n!)",
+                4: "請寫一個程式，印出費氏數列前 20 項",
+                5: "請寫一個程式，找出 1-100 間所有質數",
+                6: "請寫一個程式，印出金字塔圖案"
+            },
+            3: {
+                1: "請寫一個程式，判斷一個數字是否為質數",
+                2: "請寫一個程式，判斷一個年份是否為閏年",
+                3: "請寫一個程式，判斷三個數字中的最大值",
+                4: "請寫一個程式，根據成績顯示等第 (A/B/C/D/F)",
+                5: "請寫一個程式，判斷一個數字是正數、負數還是零",
+                6: "請寫一個程式，判斷密碼強度"
+            },
+            4: {
+                1: "請寫一個程式，反轉一個字串",
+                2: "請寫一個程式，計算字串中母音的數量",
+                3: "請寫一個程式，判斷一個字串是否為回文",
+                4: "請寫一個程式，將字串中的大小寫互換",
+                5: "請寫一個程式，統計字串中每個字元出現的次數",
+                6: "請寫一個程式，移除字串中的重複字元"
+            },
+            5: {
+                1: "請寫一個程式，找出列表中的最大值和最小值",
+                2: "請寫一個程式，計算列表中所有數字的平均值",
+                3: "請寫一個程式，將列表中的元素排序",
+                4: "請寫一個程式，移除列表中的重複元素",
+                5: "請寫一個程式，合併兩個列表並排序",
+                6: "請寫一個程式，找出兩個列表的交集"
+            },
+            6: {
+                1: "請定義一個函式，計算兩個數字的最大公因數",
+                2: "請定義一個函式，判斷一個數字是否為質數",
+                3: "請定義一個函式，將列表中的數字加總",
+                4: "請定義一個函式，計算字串的長度（不使用 len）",
+                5: "請定義一個函式，反轉一個列表",
+                6: "請定義一個遞迴函式，計算費氏數列第 n 項"
+            }
+        };
+
+        function saveTask(groupId) {
+            const task = document.getElementById(`admin-task-${groupId}`).value;
+            fetch(`/task/${groupId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({task: task})
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(`第 ${groupId} 組任務已更新！`);
+            });
+        }
+
+        function saveAllTasks() {
+            const tasks = {};
+            for (let i = 1; i <= 6; i++) {
+                tasks[i] = document.getElementById(`admin-task-${i}`).value;
+            }
+            fetch('/all_tasks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tasks: tasks})
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('所有任務已更新！');
+            });
+        }
+
+        function assignToAll() {
+            const task = document.getElementById('quick-task').value;
+            if (!task.trim()) {
+                alert('請輸入任務內容！');
+                return;
+            }
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`admin-task-${i}`).value = task;
+            }
+            saveAllTasks();
+        }
+
+        function useTemplate(templateId) {
+            const template = taskTemplates[templateId];
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`admin-task-${i}`).value = template[i];
+            }
+            alert('已載入任務範本，請按「儲存所有任務」確認！');
+        }
+
+        function clearAllGroups() {
+            if (!confirm('確定要清除所有組別的程式碼嗎？')) return;
+
+            const promises = [];
+            for (let i = 1; i <= 6; i++) {
+                promises.push(
+                    fetch(`/clear/${i}`, {method: 'POST'})
+                );
+            }
+            Promise.all(promises).then(() => {
+                alert('所有組別已清除！');
+                location.reload();
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Playground - 智慧農業課程</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Python Playground</h1>
+        <p>智慧農業課程 - Python 程式練習平台</p>
+        <nav>
+            <a href="/" class="active">練習區</a>
+            <a href="/showcase">成果展示</a>
+            <a href="/admin">管理者</a>
+        </nav>
+    </header>
+
+    <main class="groups-container">
+        {% for group_id in range(1, 7) %}
+        <div class="group-card" id="group-{{ group_id }}">
+            <div class="group-header">
+                <h2>第 {{ group_id }} 組</h2>
+                <div class="group-actions">
+                    <button class="btn btn-run" onclick="runCode({{ group_id }})">執行</button>
+                    <button class="btn btn-clear" onclick="clearGroup({{ group_id }})">清除</button>
+                </div>
+            </div>
+
+            <div class="task-area">
+                <strong>任務：</strong>
+                <span id="task-{{ group_id }}">{{ groups_data[group_id].task }}</span>
+            </div>
+
+            <div class="editor-container">
+                <label for="code-{{ group_id }}">程式碼：</label>
+                <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼...">{{ groups_data[group_id].code }}</textarea>
+            </div>
+
+            <div class="output-container">
+                <label>執行結果：</label>
+                <pre id="output-{{ group_id }}" class="output-area">{{ groups_data[group_id].output }}</pre>
+            </div>
+
+            <div class="status-bar">
+                <span id="status-{{ group_id }}">
+                    {% if groups_data[group_id].last_run %}
+                    最後執行: {{ groups_data[group_id].last_run }}
+                    {% else %}
+                    尚未執行
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
