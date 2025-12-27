@@ -109,6 +109,11 @@ nav a:hover, nav a.active {
     background: #7f8c8d;
 }
 
+.btn-secondary.btn-active {
+    background: var(--primary-color);
+    animation: pulse 2s infinite;
+}
+
 .btn-danger {
     background: var(--danger-color);
     color: white;

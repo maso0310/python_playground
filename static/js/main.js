@@ -2,6 +2,10 @@
  * Python Playground - 主要 JavaScript 檔案
  */
 
+let autoRefreshInterval = null;
+let isAutoRefresh = false;
+let focusedEditor = null;  // 追蹤目前正在編輯的組別
+
 // 執行程式碼
 function runCode(groupId) {
     const codeEditor = document.getElementById(`code-${groupId}`);
@@ -71,6 +75,60 @@ function clearGroup(groupId) {
     });
 }
 
+// 即時同步 - 從伺服器取得所有組別的資料
+function refreshAllData() {
+    fetch('/python_playground/get_all_data')
+        .then(response => response.json())
+        .then(data => {
+            for (let groupId = 1; groupId <= 6; groupId++) {
+                const group = data[groupId];
+                const codeEditor = document.getElementById(`code-${groupId}`);
+                const outputArea = document.getElementById(`output-${groupId}`);
+                const taskArea = document.getElementById(`task-${groupId}`);
+                const statusBar = document.getElementById(`status-${groupId}`);
+
+                // 只更新非目前正在編輯的組別
+                if (focusedEditor !== groupId && codeEditor) {
+                    codeEditor.value = group.code || '';
+                }
+
+                if (outputArea) {
+                    outputArea.textContent = group.output || '';
+                }
+
+                if (taskArea) {
+                    taskArea.textContent = group.task || '無指派任務';
+                }
+
+                if (statusBar) {
+                    statusBar.textContent = group.last_run
+                        ? `最後執行: ${group.last_run}`
+                        : '尚未執行';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('同步失敗:', error);
+        });
+}
+
+// 切換即時同步
+function toggleAutoRefresh() {
+    isAutoRefresh = !isAutoRefresh;
+    const btn = document.getElementById('auto-refresh-btn');
+
+    if (isAutoRefresh) {
+        autoRefreshInterval = setInterval(refreshAllData, 2000);
+        btn.textContent = '即時同步：開啟';
+        btn.classList.add('btn-active');
+        refreshAllData(); // 立即執行一次
+    } else {
+        clearInterval(autoRefreshInterval);
+        btn.textContent = '即時同步：關閉';
+        btn.classList.remove('btn-active');
+    }
+}
+
 // 監聽 Ctrl+Enter 快捷鍵執行程式碼
 document.addEventListener('keydown', function(event) {
     if (event.ctrlKey && event.key === 'Enter') {
@@ -95,6 +153,20 @@ document.querySelectorAll('.code-editor').forEach(editor => {
             this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
             this.selectionStart = this.selectionEnd = start + 4;
         }
+    });
+
+    // 追蹤正在編輯的組別
+    editor.addEventListener('focus', function() {
+        focusedEditor = parseInt(this.id.replace('code-', ''));
+    });
+
+    editor.addEventListener('blur', function() {
+        // 延遲清除，避免同步時覆蓋剛輸入的內容
+        setTimeout(() => {
+            if (focusedEditor === parseInt(this.id.replace('code-', ''))) {
+                focusedEditor = null;
+            }
+        }, 500);
     });
 });
 
