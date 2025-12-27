@@ -11,9 +11,9 @@
         <h1>Python Playground</h1>
         <p>成果展示 - 各組程式碼與執行結果</p>
         <nav>
-            <a href="/">練習區</a>
-            <a href="/showcase" class="active">成果展示</a>
-            <a href="/admin">管理者</a>
+            <a href="/python_playground/">練習區</a>
+            <a href="/python_playground/showcase" class="active">成果展示</a>
+            <a href="/python_playground/admin">管理者</a>
         </nav>
     </header>
 
@@ -62,7 +62,7 @@
         let isAutoRefresh = false;
 
         function refreshData() {
-            fetch('/get_all_data')
+            fetch('/python_playground/get_all_data')
                 .then(response => response.json())
                 .then(data => {
                     for (let groupId = 1; groupId <= 6; groupId++) {

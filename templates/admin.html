@@ -11,9 +11,9 @@
         <h1>Python Playground</h1>
         <p>管理者頁面 - 任務指派</p>
         <nav>
-            <a href="/">練習區</a>
-            <a href="/showcase">成果展示</a>
-            <a href="/admin" class="active">管理者</a>
+            <a href="/python_playground/">練習區</a>
+            <a href="/python_playground/showcase">成果展示</a>
+            <a href="/python_playground/admin" class="active">管理者</a>
         </nav>
     </header>
 
@@ -120,7 +120,7 @@
 
         function saveTask(groupId) {
             const task = document.getElementById(`admin-task-${groupId}`).value;
-            fetch(`/task/${groupId}`, {
+            fetch(`/python_playground/task/${groupId}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({task: task})
@@ -136,7 +136,7 @@
             for (let i = 1; i <= 6; i++) {
                 tasks[i] = document.getElementById(`admin-task-${i}`).value;
             }
-            fetch('/all_tasks', {
+            fetch('/python_playground/all_tasks', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({tasks: tasks})
@@ -173,7 +173,7 @@
             const promises = [];
             for (let i = 1; i <= 6; i++) {
                 promises.push(
-                    fetch(`/clear/${i}`, {method: 'POST'})
+                    fetch(`/python_playground/clear/${i}`, {method: 'POST'})
                 );
             }
             Promise.all(promises).then(() => {

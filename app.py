@@ -4,6 +4,8 @@ Python Playground - 教學用 Python 程式碼執行平台
 """
 
 from flask import Flask, render_template, request, jsonify
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from werkzeug.serving import run_simple
 import subprocess
 import sys
 import tempfile
@@ -11,7 +13,7 @@ import os
 import json
 from datetime import datetime
 
-app = Flask(__name__)
+real_app = Flask(__name__)
 
 # 儲存各組的程式碼和執行結果
 groups_data = {
@@ -38,13 +40,13 @@ for group_id, task in default_tasks.items():
     groups_data[group_id]["task"] = task
 
 
-@app.route("/")
+@real_app.route("/")
 def index():
     """主頁面 - 顯示六個組別的程式編輯區"""
     return render_template("index.html", groups_data=groups_data)
 
 
-@app.route("/run/<int:group_id>", methods=["POST"])
+@real_app.route("/run/<int:group_id>", methods=["POST"])
 def run_code(group_id):
     """執行指定組別的 Python 程式碼"""
     if group_id not in groups_data:
@@ -93,7 +95,7 @@ def run_code(group_id):
     })
 
 
-@app.route("/save/<int:group_id>", methods=["POST"])
+@real_app.route("/save/<int:group_id>", methods=["POST"])
 def save_code(group_id):
     """儲存指定組別的程式碼（不執行）"""
     if group_id not in groups_data:
@@ -106,7 +108,7 @@ def save_code(group_id):
     return jsonify({"message": "程式碼已儲存"})
 
 
-@app.route("/task/<int:group_id>", methods=["POST"])
+@real_app.route("/task/<int:group_id>", methods=["POST"])
 def update_task(group_id):
     """更新指定組別的任務"""
     if group_id not in groups_data:
@@ -119,7 +121,7 @@ def update_task(group_id):
     return jsonify({"message": "任務已更新"})
 
 
-@app.route("/all_tasks", methods=["POST"])
+@real_app.route("/all_tasks", methods=["POST"])
 def update_all_tasks():
     """批量更新所有組別的任務"""
     data = request.get_json()
@@ -133,25 +135,25 @@ def update_all_tasks():
     return jsonify({"message": "所有任務已更新"})
 
 
-@app.route("/get_all_data")
+@real_app.route("/get_all_data")
 def get_all_data():
     """取得所有組別的資料（用於展示成果）"""
     return jsonify(groups_data)
 
 
-@app.route("/showcase")
+@real_app.route("/showcase")
 def showcase():
     """成果展示頁面 - 顯示所有組別的程式碼和執行結果"""
     return render_template("showcase.html", groups_data=groups_data)
 
 
-@app.route("/admin")
+@real_app.route("/admin")
 def admin():
     """管理者頁面 - 用於指派任務"""
     return render_template("admin.html", groups_data=groups_data)
 
 
-@app.route("/clear/<int:group_id>", methods=["POST"])
+@real_app.route("/clear/<int:group_id>", methods=["POST"])
 def clear_group(group_id):
     """清除指定組別的程式碼和輸出"""
     if group_id not in groups_data:
@@ -164,5 +166,17 @@ def clear_group(group_id):
     return jsonify({"message": "已清除"})
 
 
+# 使用 DispatcherMiddleware 將應用掛載到 /python_playground 路徑
+app = DispatcherMiddleware(
+    lambda environ, start_response: (
+        start_response('404 Not Found', [('Content-Type', 'text/plain')]) or [b'Not Found']
+    ),
+    {
+        "/python_playground": real_app
+    }
+)
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # 使用 run_simple 來運行 DispatcherMiddleware
+    run_simple("0.0.0.0", 5000, app, use_reloader=True, use_debugger=True)

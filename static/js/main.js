@@ -22,7 +22,7 @@ function runCode(groupId) {
     runBtn.classList.add('running');
     outputArea.textContent = '正在執行程式碼...';
 
-    fetch(`/run/${groupId}`, {
+    fetch(`/python_playground/run/${groupId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -57,7 +57,7 @@ function clearGroup(groupId) {
     const outputArea = document.getElementById(`output-${groupId}`);
     const statusBar = document.getElementById(`status-${groupId}`);
 
-    fetch(`/clear/${groupId}`, {
+    fetch(`/python_playground/clear/${groupId}`, {
         method: 'POST'
     })
     .then(response => response.json())
@@ -103,7 +103,7 @@ setInterval(function() {
     for (let groupId = 1; groupId <= 6; groupId++) {
         const codeEditor = document.getElementById(`code-${groupId}`);
         if (codeEditor && codeEditor.value.trim()) {
-            fetch(`/save/${groupId}`, {
+            fetch(`/python_playground/save/${groupId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
