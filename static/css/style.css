@@ -126,18 +126,14 @@ nav a.active {
     color: white;
 }
 
-.btn-back,
-.btn-collapse {
-    background: var(--secondary-color);
+.btn-back-menu {
+    background: rgba(255, 255, 255, 0.15);
     color: white;
-    width: 100%;
-    padding: 0.75rem;
-    margin-top: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.btn-back:hover, .btn-back:active,
-.btn-collapse:hover, .btn-collapse:active {
-    background: #4f46e5;
+.btn-back-menu:hover, .btn-back-menu:active {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .btn-close {
@@ -185,6 +181,12 @@ nav a.active {
     padding: 1.25rem;
     max-width: 1600px;
     margin: 0 auto;
+    transition: all 0.3s ease;
+}
+
+.playground-container.single-column {
+    grid-template-columns: 1fr;
+    max-width: 1000px;
 }
 
 /* 組別區塊 */
@@ -193,6 +195,15 @@ nav a.active {
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow-lg);
     overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.group-section.hidden {
+    display: none;
+}
+
+.group-section.fullscreen {
+    /* 全螢幕模式 */
 }
 
 .group-title {
@@ -233,189 +244,188 @@ nav a.active {
     font-weight: 600;
 }
 
-/* 題目區域 */
-.tasks-area {
-    padding: 0.75rem;
+/* 題目列表 */
+.tasks-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 1rem;
 }
 
-/* 題目項目（手風琴樣式） */
-.task-item {
-    background: white;
+.task-card {
+    background: #f8fafc;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
-    margin-bottom: 0.5rem;
-    overflow: hidden;
+    padding: 0.875rem;
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.task-item:last-child {
-    margin-bottom: 0;
-}
-
-.task-item:hover {
+.task-card:hover {
     border-color: var(--secondary-color);
+    background: #eef2ff;
+    transform: translateY(-2px);
 }
 
-.task-item.expanded {
-    border-color: var(--secondary-color);
-    box-shadow: var(--box-shadow-lg);
+.task-card.completed {
+    border-color: var(--primary-color);
+    background: #ecfdf5;
 }
 
-.task-item.collapsed {
-    display: none;
-}
-
-/* 題目標題列 */
-.task-header-bar {
+.task-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.875rem 1rem;
-    cursor: pointer;
-    background: #f8fafc;
-    transition: background 0.2s;
-}
-
-.task-header-bar:hover {
-    background: #eef2ff;
-}
-
-.task-item.expanded .task-header-bar {
-    background: var(--secondary-color);
-    color: white;
-}
-
-.task-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    margin-bottom: 0.5rem;
 }
 
 .task-number {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--secondary-color);
 }
 
-.task-item.expanded .task-number {
-    color: white;
+.task-status {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    padding: 0.15rem 0.5rem;
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 4px;
 }
 
-.task-status-icon {
-    display: flex;
-    align-items: center;
+.task-status.done {
+    color: var(--primary-color);
+    background: rgba(16, 185, 129, 0.1);
 }
 
-.status-done-dot {
-    width: 8px;
-    height: 8px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.task-item.expanded .status-done-dot {
-    background: #6ee7b7;
-}
-
-.task-toggle-icon {
-    font-size: 0.8rem;
-    color: #64748b;
-    font-weight: 500;
-}
-
-.task-item.expanded .task-toggle-icon {
-    color: rgba(255, 255, 255, 0.8);
-}
-
-/* 題目內容區 */
-.task-content {
-    padding: 1rem;
-    border-top: 1px solid #e2e8f0;
-}
-
-.task-description {
-    background: #fefce8;
-    padding: 0.875rem 1rem;
-    border-radius: 8px;
-    border-left: 3px solid #eab308;
-    margin-bottom: 1rem;
-    color: #713f12;
-    font-size: 0.9rem;
+.task-desc {
+    font-size: 0.85rem;
+    color: var(--dark-color);
     line-height: 1.5;
 }
 
-.task-description strong {
-    color: #a16207;
+/* 全螢幕編輯器 */
+.editor-fullscreen {
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
 }
 
-/* 編輯器區域 */
-.editor-section,
-.output-section {
-    margin-bottom: 1rem;
+.editor-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    background: var(--secondary-color);
+    color: white;
 }
 
-.editor-toolbar,
-.output-toolbar {
+.editor-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.editor-group {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.editor-task-num {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.editor-task-desc {
+    background: #fefce8;
+    padding: 1rem 1.25rem;
+    border-left: 4px solid #eab308;
+    color: #713f12;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.editor-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 1rem;
+    gap: 1rem;
+}
+
+.editor-code-section,
+.editor-output-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-code-section {
+    flex: 1;
+}
+
+.section-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
 }
 
-.toolbar-label {
-    font-size: 0.85rem;
+.section-label {
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--dark-color);
 }
 
-.toolbar-actions {
+.section-actions {
     display: flex;
     gap: 0.5rem;
 }
 
 .last-run-time {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: #64748b;
 }
 
-.code-editor {
+.code-editor-full {
     width: 100%;
-    height: 200px;
+    min-height: 250px;
+    flex: 1;
     font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
     font-size: 14px;
-    padding: 0.875rem;
+    padding: 1rem;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     resize: vertical;
     background: #1e1e1e;
     color: #d4d4d4;
-    line-height: 1.5;
+    line-height: 1.6;
     tab-size: 4;
 }
 
-.code-editor:focus {
+.code-editor-full:focus {
     outline: none;
     border-color: var(--secondary-color);
 }
 
-.code-editor::placeholder {
+.code-editor-full::placeholder {
     color: #6b7280;
 }
 
-.output-area {
+.output-area-full {
     background: #0f172a;
     color: #22d3ee;
-    padding: 0.875rem;
+    padding: 1rem;
     border-radius: 8px;
-    min-height: 80px;
-    max-height: 150px;
+    min-height: 120px;
+    max-height: 200px;
     overflow-y: auto;
     font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
     font-size: 13px;
     white-space: pre-wrap;
     word-break: break-word;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 /* ========== 成果總覽頁面 ========== */
@@ -675,6 +685,10 @@ nav a.active {
         grid-template-columns: 1fr;
         max-width: 800px;
     }
+
+    .tasks-list {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 /* 平板（直向）& 大手機 */
@@ -713,20 +727,26 @@ nav a.active {
         font-size: 1rem;
     }
 
-    .task-header-bar {
+    .tasks-list {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .task-card {
         padding: 0.75rem;
     }
 
-    .task-content {
-        padding: 0.75rem;
+    .task-desc {
+        font-size: 0.8rem;
     }
 
-    .code-editor {
-        height: 200px;
+    .code-editor-full {
+        min-height: 200px;
         font-size: 13px;
     }
 
-    .output-area {
+    .output-area-full {
         font-size: 12px;
         min-height: 100px;
     }
@@ -774,29 +794,28 @@ nav a.active {
         top: 85px;
     }
 
-    .tasks-area {
-        padding: 0.5rem;
+    .tasks-list {
+        grid-template-columns: 1fr;
     }
 
-    .task-header-bar {
-        padding: 0.625rem 0.75rem;
-    }
-
-    .task-number {
-        font-size: 0.85rem;
-    }
-
-    .task-content {
+    .task-card {
         padding: 0.625rem;
     }
 
-    .task-description {
-        padding: 0.625rem 0.75rem;
-        font-size: 0.85rem;
+    .task-number {
+        font-size: 0.75rem;
     }
 
-    .code-editor {
-        height: 180px;
+    .task-desc {
+        font-size: 0.8rem;
+    }
+
+    .editor-main {
+        padding: 0.75rem;
+    }
+
+    .code-editor-full {
+        min-height: 180px;
         font-size: 12px;
         padding: 0.75rem;
     }
@@ -822,8 +841,8 @@ nav a.active {
 
 /* 觸控優化 */
 @media (hover: none) and (pointer: coarse) {
-    .task-header-bar {
-        min-height: 48px;
+    .task-card {
+        min-height: 80px;
     }
 
     .btn {
