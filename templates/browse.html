@@ -27,16 +27,7 @@
                 <select id="filter-group" onchange="applyFilters()">
                     <option value="all">全部組別</option>
                     {% for group_id in range(1, 7) %}
-                    <option value="{{ group_id }}">第 {{ group_id }} 組</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="filter-category">類別：</label>
-                <select id="filter-category" onchange="applyFilters()">
-                    <option value="all">全部類別</option>
-                    {% for cat_id, cat_name in categories.items() %}
-                    <option value="{{ cat_id }}">{{ cat_name }}</option>
+                    <option value="{{ group_id }}">第 {{ group_id }} 組 - {{ group_names[group_id] }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -84,8 +75,8 @@
     </main>
 
     <script>
-        const categories = {{ categories | tojson }};
-        const tasks = {{ tasks | tojson }};
+        const groupNames = {{ group_names | tojson }};
+        const groupTasks = {{ group_tasks | tojson }};
         let allData = null;
 
         // 載入所有資料
@@ -100,7 +91,6 @@
             if (!allData) return;
 
             const groupFilter = document.getElementById('filter-group').value;
-            const categoryFilter = document.getElementById('filter-category').value;
             const statusFilter = document.getElementById('filter-status').value;
 
             const results = [];
@@ -110,32 +100,27 @@
             for (let groupId = 1; groupId <= 6; groupId++) {
                 if (groupFilter !== 'all' && groupFilter !== String(groupId)) continue;
 
-                for (const [catId, catTasks] of Object.entries(tasks)) {
-                    if (categoryFilter !== 'all' && categoryFilter !== catId) continue;
+                const tasks = groupTasks[groupId];
+                for (const [taskId, taskText] of Object.entries(tasks)) {
+                    const taskData = allData.groups_data[groupId][taskId] || {};
+                    const isCompleted = !!taskData.last_run;
 
-                    for (const [taskId, taskText] of Object.entries(catTasks)) {
-                        const key = `${catId}_${taskId}`;
-                        const taskData = allData.groups_data[groupId][key] || {};
-                        const isCompleted = !!taskData.last_run;
+                    totalCount++;
+                    if (isCompleted) completedCount++;
 
-                        totalCount++;
-                        if (isCompleted) completedCount++;
+                    if (statusFilter === 'completed' && !isCompleted) continue;
+                    if (statusFilter === 'pending' && isCompleted) continue;
 
-                        if (statusFilter === 'completed' && !isCompleted) continue;
-                        if (statusFilter === 'pending' && isCompleted) continue;
-
-                        results.push({
-                            groupId,
-                            categoryId: parseInt(catId),
-                            categoryName: categories[catId],
-                            taskId: parseInt(taskId),
-                            taskText,
-                            code: taskData.code || '',
-                            output: taskData.output || '',
-                            lastRun: taskData.last_run,
-                            isCompleted
-                        });
-                    }
+                    results.push({
+                        groupId,
+                        groupName: groupNames[groupId],
+                        taskId: parseInt(taskId),
+                        taskText,
+                        code: taskData.code || '',
+                        output: taskData.output || '',
+                        lastRun: taskData.last_run,
+                        isCompleted
+                    });
                 }
             }
 
@@ -174,10 +159,10 @@
 
             grid.innerHTML = results.map(r => `
                 <div class="result-card ${r.isCompleted ? 'completed' : 'pending'}"
-                     onclick="showDetail(${r.groupId}, ${r.categoryId}, ${r.taskId})">
+                     onclick="showDetail(${r.groupId}, ${r.taskId})">
                     <div class="result-header">
                         <span class="result-group">第 ${r.groupId} 組</span>
-                        <span class="result-category">${r.categoryName}</span>
+                        <span class="result-category">${r.groupName}</span>
                     </div>
                     <div class="result-task">題目 ${r.taskId}: ${r.taskText.substring(0, 50)}${r.taskText.length > 50 ? '...' : ''}</div>
                     <div class="result-footer">
@@ -191,13 +176,12 @@
         }
 
         // 顯示詳細資料
-        function showDetail(groupId, categoryId, taskId) {
-            const key = `${categoryId}_${taskId}`;
-            const taskData = allData.groups_data[groupId][key] || {};
-            const taskText = tasks[categoryId][taskId];
+        function showDetail(groupId, taskId) {
+            const taskData = allData.groups_data[groupId][taskId] || {};
+            const taskText = groupTasks[groupId][taskId];
 
             document.getElementById('modal-title').textContent =
-                `第 ${groupId} 組 - ${categories[categoryId]} - 題目 ${taskId}`;
+                `第 ${groupId} 組 - ${groupNames[groupId]} - 題目 ${taskId}`;
             document.getElementById('modal-task').textContent = taskText;
             document.getElementById('modal-code').textContent = taskData.code || '（尚無程式碼）';
             document.getElementById('modal-output').textContent = taskData.output || '（尚無輸出）';
