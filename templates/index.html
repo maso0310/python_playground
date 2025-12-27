@@ -34,7 +34,7 @@
         <section class="group-section" id="group-{{ group_id }}">
             <div class="group-title">
                 <h2>第 {{ group_id }} 組</h2>
-                <span class="completed-badge" id="badge-{{ group_id }}">0 / 6 題</span>
+                <span class="completed-badge" id="badge-{{ group_id }}">0 / 18 題</span>
             </div>
 
             <!-- 題目列表（預設顯示） -->
@@ -171,7 +171,7 @@
 
         // 載入組別所有題目的狀態
         function loadGroupTaskStatus(groupId) {
-            for (let taskId = 1; taskId <= 6; taskId++) {
+            for (let taskId = 1; taskId <= 18; taskId++) {
                 fetch(`/python_playground/get_task/${groupId}/${taskId}`)
                     .then(response => response.json())
                     .then(data => {
