@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Python Playground - 智慧農業課程</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
-        <h1>Python Playground</h1>
-        <p>智慧農業課程 - Python 程式練習平台</p>
+        <div class="header-left">
+            <h1>Python Playground</h1>
+            <p>智慧農業課程 - Python 程式練習平台</p>
+        </div>
         <nav>
             <a href="/python_playground/" class="active">練習區</a>
             <a href="/python_playground/admin">管理者</a>
@@ -30,24 +33,26 @@
                 </div>
             </div>
 
-            <div class="task-area">
-                <strong>任務：</strong>
-                <span id="task-{{ group_id }}">{{ groups_data[group_id].task }}</span>
-            </div>
+            <div class="group-body">
+                <div class="task-area">
+                    <strong>任務：</strong>
+                    <span id="task-{{ group_id }}">{{ groups_data[group_id].task }}</span>
+                </div>
 
-            <div class="editor-container">
-                <label for="code-{{ group_id }}">程式碼：</label>
-                <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼...">{{ groups_data[group_id].code }}</textarea>
-            </div>
+                <div class="editor-container">
+                    <label for="code-{{ group_id }}">程式碼</label>
+                    <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼...">{{ groups_data[group_id].code }}</textarea>
+                </div>
 
-            <div class="input-container">
-                <label for="input-{{ group_id }}">輸入資料（每行一個 input）：</label>
-                <textarea id="input-{{ group_id }}" class="input-area" placeholder="程式需要 input() 時，在這裡輸入資料&#10;每行對應一次 input() 呼叫">{{ groups_data[group_id].user_input if groups_data[group_id].user_input else '' }}</textarea>
-            </div>
+                <div class="input-container">
+                    <label for="input-{{ group_id }}">輸入資料（每行對應一次 input）</label>
+                    <textarea id="input-{{ group_id }}" class="input-area" placeholder="程式需要 input() 時，在這裡輸入資料...">{{ groups_data[group_id].user_input if groups_data[group_id].user_input else '' }}</textarea>
+                </div>
 
-            <div class="output-container">
-                <label>執行結果：</label>
-                <pre id="output-{{ group_id }}" class="output-area">{{ groups_data[group_id].output }}</pre>
+                <div class="output-container">
+                    <label>執行結果</label>
+                    <pre id="output-{{ group_id }}" class="output-area">{{ groups_data[group_id].output }}</pre>
+                </div>
             </div>
 
             <div class="status-bar">
