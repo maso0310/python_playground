@@ -1,6 +1,6 @@
 """
 Python Playground - 教學用 Python 程式碼執行平台
-讓六個組別可以在網頁上輸入並執行 Python 程式碼
+讓六個組別可以選擇題目並執行 Python 程式碼
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -14,49 +14,132 @@ from datetime import datetime
 
 real_app = Flask(__name__)
 
-# 儲存各組的程式碼和執行結果
-groups_data = {
-    1: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
-    2: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
-    3: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
-    4: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
-    5: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
-    6: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
+# 題目類別名稱
+CATEGORIES = {
+    1: "基礎練習",
+    2: "演算法",
+    3: "圖形輸出",
+    4: "資料處理",
+    5: "模擬實驗",
+    6: "綜合挑戰"
 }
 
-# 預設任務列表（靜態執行版本）
-default_tasks = {
-    1: "【密碼產生器】產生 5 組隨機密碼，每組包含大小寫字母和數字，長度為 12 位",
-    2: "【二分搜尋】電腦隨機產生 1-100 的答案，然後用二分法自動猜測，印出每次猜測的過程",
-    3: "【圖形繪製】用 * 符號印出一棵高度為 10 的聖誕樹（三角形加樹幹）",
-    4: "【撲克牌】模擬洗牌並抽出 5 張牌，判斷牌型（同花、順子、葫蘆等）",
-    5: "【摩斯密碼】將 'HELLO WORLD' 轉換成摩斯密碼，並將摩斯密碼轉回英文驗證",
-    6: "【統計模擬】模擬擲 2 顆骰子 10000 次，統計並印出每種點數和（2-12）的出現次數和機率",
+# 所有題目（按類別分組，每類別6題）
+TASKS = {
+    1: {  # 基礎練習
+        1: "【變數練習】宣告姓名、年齡、身高三個變數，並印出自我介紹",
+        2: "【計算機】計算 123 + 456、789 - 123、12 * 34、100 / 7 的結果",
+        3: "【字串操作】將 'Hello World' 轉成大寫、小寫、反轉，並計算長度",
+        4: "【列表操作】建立 1-10 的列表，印出總和、平均、最大、最小值",
+        5: "【字典練習】建立一個學生資料字典（姓名、學號、成績），並印出內容",
+        6: "【迴圈練習】用 for 迴圈印出 1-100 中所有 3 的倍數"
+    },
+    2: {  # 演算法
+        1: "【二分搜尋】電腦隨機產生 1-100 的答案，用二分法自動猜測並印出過程",
+        2: "【排序比較】產生 10 個隨機數字，分別用氣泡排序和選擇排序印出過程",
+        3: "【費氏數列】印出費氏數列前 20 項，並計算第 20 項的值",
+        4: "【質數篩選】找出 1-100 之間所有的質數",
+        5: "【最大公因數】實作輾轉相除法，計算 48 和 18 的最大公因數",
+        6: "【河內塔】印出 4 個圓盤的河內塔移動步驟"
+    },
+    3: {  # 圖形輸出
+        1: "【聖誕樹】用 * 符號印出高度為 10 的聖誕樹（三角形加樹幹）",
+        2: "【菱形】用 * 符號印出寬度為 9 的菱形",
+        3: "【空心方形】用 * 符號印出邊長為 8 的空心方形",
+        4: "【數字金字塔】印出數字金字塔（1, 12, 123, 1234...共 9 行）",
+        5: "【九九乘法表】印出格式整齊的九九乘法表",
+        6: "【Pascal 三角形】印出巴斯卡三角形前 10 行"
+    },
+    4: {  # 資料處理
+        1: "【成績統計】建立 10 位學生的成績列表，計算平均、最高、最低、及格人數",
+        2: "【詞頻統計】統計 'to be or not to be that is the question' 每個單字出現次數",
+        3: "【氣溫分析】建立一週氣溫資料，找出最熱最冷的日子並計算平均溫度",
+        4: "【重複過濾】從 [1,2,2,3,3,3,4,4,4,4] 中移除重複元素",
+        5: "【分組統計】將 1-20 分成奇數和偶數兩組，分別計算總和",
+        6: "【成績等第】將 [85,72,90,66,58,95,43,77] 轉換成等第（A/B/C/D/F）"
+    },
+    5: {  # 模擬實驗
+        1: "【擲硬幣】模擬擲硬幣 10000 次，統計正反面次數和機率",
+        2: "【骰子統計】模擬擲 2 顆骰子 10000 次，統計每種點數和的機率",
+        3: "【蒙地卡羅】用隨機投點法估算圓周率（投 100000 個點）",
+        4: "【生日悖論】模擬 1000 次，驗證 23 人中至少兩人同生日的機率",
+        5: "【隨機漫步】模擬 2D 隨機漫步 1000 步，計算最終距離原點的距離",
+        6: "【抽獎模擬】模擬抽獎 1000 次，統計 1/100 中獎率的實際結果"
+    },
+    6: {  # 綜合挑戰
+        1: "【密碼產生器】產生 5 組 12 位隨機密碼，包含大小寫字母、數字和符號",
+        2: "【凱薩密碼】將 'HELLO WORLD' 用位移 3 加密，再解密回來",
+        3: "【摩斯密碼】將 'SOS' 轉成摩斯密碼，再轉回英文驗證",
+        4: "【撲克牌】模擬洗牌並抽 5 張，判斷是否為同花、順子、對子等牌型",
+        5: "【數字轉換】將十進位 255 轉成二進位、八進位、十六進位",
+        6: "【文字遊戲】檢查 'racecar'、'hello'、'level' 是否為回文"
+    }
 }
 
-# 初始化任務
-for group_id, task in default_tasks.items():
-    groups_data[group_id]["task"] = task
+# 各組的執行結果（使用 "類別_題號" 作為 key）
+# 結構: groups_data[group_id]["cat_task"] = {code, output, last_run}
+groups_data = {i: {} for i in range(1, 7)}
+
+
+def get_task_key(category_id, task_id):
+    """產生任務的唯一 key"""
+    return f"{category_id}_{task_id}"
+
+
+def get_group_task_data(group_id, category_id, task_id):
+    """取得指定組別的指定題目資料"""
+    key = get_task_key(category_id, task_id)
+    if key not in groups_data[group_id]:
+        groups_data[group_id][key] = {
+            "code": "",
+            "output": "",
+            "last_run": None
+        }
+    return groups_data[group_id][key]
 
 
 @real_app.route("/")
 def index():
-    """主頁面 - 顯示六個組別的程式編輯區"""
-    return render_template("index.html", groups_data=groups_data)
+    """主頁面 - 顯示六個組別的練習區"""
+    return render_template(
+        "index.html",
+        categories=CATEGORIES,
+        tasks=TASKS,
+        groups_data=groups_data
+    )
 
 
-@real_app.route("/run/<int:group_id>", methods=["POST"])
-def run_code(group_id):
-    """執行指定組別的 Python 程式碼"""
-    if group_id not in groups_data:
+@real_app.route("/get_task/<int:group_id>/<int:category_id>/<int:task_id>")
+def get_task(group_id, category_id, task_id):
+    """取得指定組別的指定題目資料"""
+    if group_id not in range(1, 7):
+        return jsonify({"error": "無效的組別"}), 400
+    if category_id not in TASKS:
+        return jsonify({"error": "無效的類別"}), 400
+    if task_id not in TASKS[category_id]:
+        return jsonify({"error": "無效的題目"}), 400
+
+    task_data = get_group_task_data(group_id, category_id, task_id)
+    return jsonify({
+        "task": TASKS[category_id][task_id],
+        "code": task_data["code"],
+        "output": task_data["output"],
+        "last_run": task_data["last_run"]
+    })
+
+
+@real_app.route("/run/<int:group_id>/<int:category_id>/<int:task_id>", methods=["POST"])
+def run_code(group_id, category_id, task_id):
+    """執行指定組別的指定題目程式碼"""
+    if group_id not in range(1, 7):
         return jsonify({"error": "無效的組別"}), 400
 
     data = request.get_json()
     code = data.get("code", "")
 
-    # 儲存程式碼
-    groups_data[group_id]["code"] = code
-    groups_data[group_id]["last_run"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    task_data = get_group_task_data(group_id, category_id, task_id)
+    task_data["code"] = code
+    task_data["last_run"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # 建立暫存檔案執行程式碼
     try:
@@ -64,7 +147,6 @@ def run_code(group_id):
             f.write(code)
             temp_file = f.name
 
-        # 執行程式碼，設定超時時間為 10 秒
         result = subprocess.run(
             [sys.executable, temp_file],
             capture_output=True,
@@ -85,128 +167,78 @@ def run_code(group_id):
     except Exception as e:
         output = f"[系統錯誤] {str(e)}"
 
-    groups_data[group_id]["output"] = output
+    task_data["output"] = output
 
     return jsonify({
         "output": output,
-        "last_run": groups_data[group_id]["last_run"]
+        "last_run": task_data["last_run"]
     })
 
 
-@real_app.route("/save/<int:group_id>", methods=["POST"])
-def save_code(group_id):
-    """儲存指定組別的程式碼（不執行）"""
-    if group_id not in groups_data:
+@real_app.route("/save/<int:group_id>/<int:category_id>/<int:task_id>", methods=["POST"])
+def save_code(group_id, category_id, task_id):
+    """儲存程式碼（不執行）"""
+    if group_id not in range(1, 7):
         return jsonify({"error": "無效的組別"}), 400
 
     data = request.get_json()
     code = data.get("code", "")
-    groups_data[group_id]["code"] = code
+
+    task_data = get_group_task_data(group_id, category_id, task_id)
+    task_data["code"] = code
 
     return jsonify({"message": "程式碼已儲存"})
 
 
-@real_app.route("/task/<int:group_id>", methods=["POST"])
-def update_task(group_id):
-    """更新指定組別的任務，並將舊任務存入歷史"""
-    if group_id not in groups_data:
-        return jsonify({"error": "無效的組別"}), 400
-
-    data = request.get_json()
-    new_task = data.get("task", "")
-    save_history = data.get("save_history", True)  # 預設儲存歷史
-
-    group = groups_data[group_id]
-
-    # 如果有舊任務且有程式碼或輸出，儲存到歷史紀錄
-    if save_history and group["task"] and (group["code"] or group["output"]):
-        history_entry = {
-            "task": group["task"],
-            "code": group["code"],
-            "output": group["output"],
-            "completed_at": group["last_run"] or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        group["history"].append(history_entry)
-
-    # 更新為新任務，清除目前的程式碼和輸出
-    group["task"] = new_task
-    group["code"] = ""
-    group["output"] = ""
-    group["last_run"] = None
-
-    return jsonify({"message": "任務已更新", "history_count": len(group["history"])})
-
-
-@real_app.route("/all_tasks", methods=["POST"])
-def update_all_tasks():
-    """批量更新所有組別的任務，並儲存歷史"""
-    data = request.get_json()
-    tasks = data.get("tasks", {})
-    save_history = data.get("save_history", True)
-
-    for group_id, task in tasks.items():
-        gid = int(group_id)
-        if gid in groups_data:
-            group = groups_data[gid]
-
-            # 儲存歷史紀錄
-            if save_history and group["task"] and (group["code"] or group["output"]):
-                history_entry = {
-                    "task": group["task"],
-                    "code": group["code"],
-                    "output": group["output"],
-                    "completed_at": group["last_run"] or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                group["history"].append(history_entry)
-
-            # 更新任務並清除目前資料
-            group["task"] = task
-            group["code"] = ""
-            group["output"] = ""
-            group["last_run"] = None
-
-    return jsonify({"message": "所有任務已更新"})
-
-
 @real_app.route("/get_all_data")
 def get_all_data():
-    """取得所有組別的資料"""
-    return jsonify(groups_data)
-
-
-@real_app.route("/history/<int:group_id>")
-def get_history(group_id):
-    """取得指定組別的歷史紀錄"""
-    if group_id not in groups_data:
-        return jsonify({"error": "無效的組別"}), 400
-
+    """取得所有組別的所有資料"""
     return jsonify({
-        "group_id": group_id,
-        "history": groups_data[group_id]["history"]
+        "categories": CATEGORIES,
+        "tasks": TASKS,
+        "groups_data": groups_data
     })
 
 
-@real_app.route("/overview")
-def overview():
-    """全班總覽頁面 - 查看各組執行狀況與歷史紀錄"""
-    return render_template("overview.html", groups_data=groups_data)
+@real_app.route("/get_group_summary")
+def get_group_summary():
+    """取得所有組別的完成狀況摘要"""
+    summary = {}
+    for group_id in range(1, 7):
+        summary[group_id] = {
+            "completed": 0,
+            "total": sum(len(tasks) for tasks in TASKS.values())
+        }
+        for key, data in groups_data[group_id].items():
+            if data.get("last_run"):
+                summary[group_id]["completed"] += 1
+    return jsonify(summary)
 
 
-@real_app.route("/admin")
-def admin():
-    """管理者頁面 - 用於指派任務"""
-    return render_template("admin.html", groups_data=groups_data)
+@real_app.route("/browse")
+def browse():
+    """瀏覽所有組別的成果"""
+    return render_template(
+        "browse.html",
+        categories=CATEGORIES,
+        tasks=TASKS,
+        groups_data=groups_data
+    )
 
 
-@real_app.route("/clear/<int:group_id>", methods=["POST"])
-def clear_group(group_id):
-    """清除指定組別的程式碼和輸出"""
-    if group_id not in groups_data:
+@real_app.route("/clear/<int:group_id>/<int:category_id>/<int:task_id>", methods=["POST"])
+def clear_task(group_id, category_id, task_id):
+    """清除指定題目的程式碼和輸出"""
+    if group_id not in range(1, 7):
         return jsonify({"error": "無效的組別"}), 400
 
-    groups_data[group_id]["code"] = ""
-    groups_data[group_id]["output"] = ""
-    groups_data[group_id]["last_run"] = None
+    key = get_task_key(category_id, task_id)
+    if key in groups_data[group_id]:
+        groups_data[group_id][key] = {
+            "code": "",
+            "output": "",
+            "last_run": None
+        }
 
     return jsonify({"message": "已清除"})
 

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>成果總覽 - Python Playground</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>Python Playground</h1>
+            <p class="hide-mobile">成果總覽</p>
+        </div>
+        <nav>
+            <a href="/python_playground/">練習區</a>
+            <a href="/python_playground/browse" class="active">成果總覽</a>
+        </nav>
+    </header>
+
+    <main class="browse-container">
+        <!-- 篩選器 -->
+        <div class="browse-filters">
+            <div class="filter-group">
+                <label for="filter-group">組別：</label>
+                <select id="filter-group" onchange="applyFilters()">
+                    <option value="all">全部組別</option>
+                    {% for group_id in range(1, 7) %}
+                    <option value="{{ group_id }}">第 {{ group_id }} 組</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-category">類別：</label>
+                <select id="filter-category" onchange="applyFilters()">
+                    <option value="all">全部類別</option>
+                    {% for cat_id, cat_name in categories.items() %}
+                    <option value="{{ cat_id }}">{{ cat_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-status">狀態：</label>
+                <select id="filter-status" onchange="applyFilters()">
+                    <option value="all">全部</option>
+                    <option value="completed">已完成</option>
+                    <option value="pending">未完成</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 統計摘要 -->
+        <div class="browse-summary" id="browse-summary">
+            載入中...
+        </div>
+
+        <!-- 結果列表 -->
+        <div class="results-grid" id="results-grid">
+            <!-- 動態載入 -->
+        </div>
+
+        <!-- 詳細檢視 Modal -->
+        <div class="modal" id="detail-modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">題目詳情</h3>
+                    <button class="btn-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-task" id="modal-task"></div>
+                    <div class="modal-section">
+                        <h4>程式碼</h4>
+                        <pre class="modal-code" id="modal-code"></pre>
+                    </div>
+                    <div class="modal-section">
+                        <h4>執行結果</h4>
+                        <pre class="modal-output" id="modal-output"></pre>
+                    </div>
+                    <div class="modal-meta" id="modal-meta"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const categories = {{ categories | tojson }};
+        const tasks = {{ tasks | tojson }};
+        let allData = null;
+
+        // 載入所有資料
+        async function loadAllData() {
+            const response = await fetch('/python_playground/get_all_data');
+            allData = await response.json();
+            applyFilters();
+        }
+
+        // 套用篩選條件
+        function applyFilters() {
+            if (!allData) return;
+
+            const groupFilter = document.getElementById('filter-group').value;
+            const categoryFilter = document.getElementById('filter-category').value;
+            const statusFilter = document.getElementById('filter-status').value;
+
+            const results = [];
+            let completedCount = 0;
+            let totalCount = 0;
+
+            for (let groupId = 1; groupId <= 6; groupId++) {
+                if (groupFilter !== 'all' && groupFilter !== String(groupId)) continue;
+
+                for (const [catId, catTasks] of Object.entries(tasks)) {
+                    if (categoryFilter !== 'all' && categoryFilter !== catId) continue;
+
+                    for (const [taskId, taskText] of Object.entries(catTasks)) {
+                        const key = `${catId}_${taskId}`;
+                        const taskData = allData.groups_data[groupId][key] || {};
+                        const isCompleted = !!taskData.last_run;
+
+                        totalCount++;
+                        if (isCompleted) completedCount++;
+
+                        if (statusFilter === 'completed' && !isCompleted) continue;
+                        if (statusFilter === 'pending' && isCompleted) continue;
+
+                        results.push({
+                            groupId,
+                            categoryId: parseInt(catId),
+                            categoryName: categories[catId],
+                            taskId: parseInt(taskId),
+                            taskText,
+                            code: taskData.code || '',
+                            output: taskData.output || '',
+                            lastRun: taskData.last_run,
+                            isCompleted
+                        });
+                    }
+                }
+            }
+
+            renderSummary(completedCount, totalCount);
+            renderResults(results);
+        }
+
+        // 渲染統計摘要
+        function renderSummary(completed, total) {
+            const summaryEl = document.getElementById('browse-summary');
+            const percent = total > 0 ? Math.round(completed / total * 100) : 0;
+            summaryEl.innerHTML = `
+                <div class="summary-stat">
+                    <span class="stat-number">${completed}</span>
+                    <span class="stat-label">已完成</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-number">${total - completed}</span>
+                    <span class="stat-label">未完成</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="stat-number">${percent}%</span>
+                    <span class="stat-label">完成率</span>
+                </div>
+            `;
+        }
+
+        // 渲染結果列表
+        function renderResults(results) {
+            const grid = document.getElementById('results-grid');
+
+            if (results.length === 0) {
+                grid.innerHTML = '<div class="no-results">沒有符合條件的結果</div>';
+                return;
+            }
+
+            grid.innerHTML = results.map(r => `
+                <div class="result-card ${r.isCompleted ? 'completed' : 'pending'}"
+                     onclick="showDetail(${r.groupId}, ${r.categoryId}, ${r.taskId})">
+                    <div class="result-header">
+                        <span class="result-group">第 ${r.groupId} 組</span>
+                        <span class="result-category">${r.categoryName}</span>
+                    </div>
+                    <div class="result-task">題目 ${r.taskId}: ${r.taskText.substring(0, 50)}${r.taskText.length > 50 ? '...' : ''}</div>
+                    <div class="result-footer">
+                        <span class="result-status ${r.isCompleted ? 'status-done' : 'status-pending'}">
+                            ${r.isCompleted ? '已完成' : '未完成'}
+                        </span>
+                        ${r.lastRun ? `<span class="result-time">${r.lastRun}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 顯示詳細資料
+        function showDetail(groupId, categoryId, taskId) {
+            const key = `${categoryId}_${taskId}`;
+            const taskData = allData.groups_data[groupId][key] || {};
+            const taskText = tasks[categoryId][taskId];
+
+            document.getElementById('modal-title').textContent =
+                `第 ${groupId} 組 - ${categories[categoryId]} - 題目 ${taskId}`;
+            document.getElementById('modal-task').textContent = taskText;
+            document.getElementById('modal-code').textContent = taskData.code || '（尚無程式碼）';
+            document.getElementById('modal-output').textContent = taskData.output || '（尚無輸出）';
+            document.getElementById('modal-meta').textContent =
+                taskData.last_run ? `執行時間: ${taskData.last_run}` : '尚未執行';
+
+            document.getElementById('detail-modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 關閉 Modal
+        function closeModal() {
+            document.getElementById('detail-modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // 點擊背景關閉
+        document.getElementById('detail-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ESC 關閉
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // 頁面載入
+        document.addEventListener('DOMContentLoaded', loadAllData);
+    </script>
+</body>
+</html>

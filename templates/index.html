@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Python Playground - 智慧農業課程</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
@@ -11,59 +11,309 @@
     <header>
         <div class="header-left">
             <h1>Python Playground</h1>
-            <p>智慧農業課程 - Python 程式練習平台</p>
+            <p class="hide-mobile">智慧農業課程 - Python 程式練習平台</p>
         </div>
         <nav>
             <a href="/python_playground/" class="active">練習區</a>
-            <a href="/python_playground/overview">總覽</a>
-            <a href="/python_playground/admin">管理者</a>
-            <button class="btn btn-secondary" id="auto-refresh-btn" onclick="toggleAutoRefresh()">
-                即時同步：關閉
-            </button>
+            <a href="/python_playground/browse">成果總覽</a>
         </nav>
     </header>
 
-    <main class="groups-container">
+    <!-- 組別選擇器（手機版顯示在最上方） -->
+    <div class="group-selector-mobile">
+        <label for="mobile-group-select">選擇組別：</label>
+        <select id="mobile-group-select" onchange="scrollToGroup(this.value)">
+            {% for group_id in range(1, 7) %}
+            <option value="{{ group_id }}">第 {{ group_id }} 組</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <main class="playground-container">
         {% for group_id in range(1, 7) %}
-        <div class="group-card" id="group-{{ group_id }}">
-            <div class="group-header">
+        <section class="group-section" id="group-{{ group_id }}">
+            <div class="group-title">
                 <h2>第 {{ group_id }} 組</h2>
-                <div class="group-actions">
-                    <button class="btn btn-run" id="run-btn-{{ group_id }}" onclick="runCode({{ group_id }})">執行</button>
-                    <button class="btn btn-clear" onclick="clearGroup({{ group_id }})">清除</button>
+                <span class="completed-badge" id="badge-{{ group_id }}">0 / 36 題</span>
+            </div>
+
+            <div class="category-selector">
+                <label for="category-{{ group_id }}">選擇題目類別：</label>
+                <select id="category-{{ group_id }}" onchange="loadCategory({{ group_id }}, this.value)">
+                    <option value="">-- 請選擇類別 --</option>
+                    {% for cat_id, cat_name in categories.items() %}
+                    <option value="{{ cat_id }}">{{ cat_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 題目列表區域 -->
+            <div class="tasks-area" id="tasks-area-{{ group_id }}" style="display: none;">
+                <div class="tasks-grid" id="tasks-grid-{{ group_id }}">
+                    <!-- 動態載入題目 -->
                 </div>
             </div>
 
-            <div class="group-body">
-                <div class="task-area">
-                    <strong>任務：</strong>
-                    <span id="task-{{ group_id }}">{{ groups_data[group_id].task }}</span>
+            <!-- 程式編輯區域 -->
+            <div class="editor-area" id="editor-area-{{ group_id }}" style="display: none;">
+                <div class="current-task-display">
+                    <span class="task-label">目前題目：</span>
+                    <span class="task-text" id="current-task-text-{{ group_id }}"></span>
                 </div>
 
-                <div class="editor-container">
-                    <label for="code-{{ group_id }}">程式碼</label>
-                    <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼...">{{ groups_data[group_id].code }}</textarea>
+                <div class="editor-wrapper">
+                    <div class="editor-header">
+                        <span>程式碼</span>
+                        <div class="editor-actions">
+                            <button class="btn btn-run" onclick="runCode({{ group_id }})">執行</button>
+                            <button class="btn btn-clear" onclick="clearCode({{ group_id }})">清除</button>
+                        </div>
+                    </div>
+                    <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼..."></textarea>
                 </div>
 
-                <div class="output-container">
-                    <label>執行結果</label>
-                    <pre id="output-{{ group_id }}" class="output-area">{{ groups_data[group_id].output }}</pre>
+                <div class="output-wrapper">
+                    <div class="output-header">
+                        <span>執行結果</span>
+                        <span class="last-run" id="last-run-{{ group_id }}"></span>
+                    </div>
+                    <pre id="output-{{ group_id }}" class="output-area"></pre>
                 </div>
+
+                <button class="btn btn-back" onclick="backToTasks({{ group_id }})">返回題目列表</button>
             </div>
-
-            <div class="status-bar">
-                <span id="status-{{ group_id }}">
-                    {% if groups_data[group_id].last_run %}
-                    最後執行: {{ groups_data[group_id].last_run }}
-                    {% else %}
-                    尚未執行
-                    {% endif %}
-                </span>
-            </div>
-        </div>
+        </section>
         {% endfor %}
     </main>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // 儲存當前各組選擇的類別和題目
+        const groupState = {};
+        for (let i = 1; i <= 6; i++) {
+            groupState[i] = { categoryId: null, taskId: null };
+        }
+
+        // 題目資料（從後端取得）
+        const categories = {{ categories | tojson }};
+        const tasks = {{ tasks | tojson }};
+
+        // 滾動到指定組別
+        function scrollToGroup(groupId) {
+            const el = document.getElementById(`group-${groupId}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // 載入類別的所有題目
+        function loadCategory(groupId, categoryId) {
+            if (!categoryId) {
+                document.getElementById(`tasks-area-${groupId}`).style.display = 'none';
+                document.getElementById(`editor-area-${groupId}`).style.display = 'none';
+                return;
+            }
+
+            groupState[groupId].categoryId = parseInt(categoryId);
+            groupState[groupId].taskId = null;
+
+            const tasksGrid = document.getElementById(`tasks-grid-${groupId}`);
+            const categoryTasks = tasks[categoryId];
+
+            let html = '';
+            for (const [taskId, taskText] of Object.entries(categoryTasks)) {
+                html += `
+                    <div class="task-card" id="task-card-${groupId}-${categoryId}-${taskId}"
+                         onclick="selectTask(${groupId}, ${categoryId}, ${taskId})">
+                        <div class="task-number">題目 ${taskId}</div>
+                        <div class="task-desc">${taskText}</div>
+                        <div class="task-status" id="task-status-${groupId}-${categoryId}-${taskId}">
+                            <span class="status-pending">未完成</span>
+                        </div>
+                    </div>
+                `;
+            }
+            tasksGrid.innerHTML = html;
+
+            // 載入各題目的狀態
+            for (const taskId of Object.keys(categoryTasks)) {
+                loadTaskStatus(groupId, categoryId, taskId);
+            }
+
+            document.getElementById(`tasks-area-${groupId}`).style.display = 'block';
+            document.getElementById(`editor-area-${groupId}`).style.display = 'none';
+        }
+
+        // 載入題目狀態
+        function loadTaskStatus(groupId, categoryId, taskId) {
+            fetch(`/python_playground/get_task/${groupId}/${categoryId}/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const statusEl = document.getElementById(`task-status-${groupId}-${categoryId}-${taskId}`);
+                    const cardEl = document.getElementById(`task-card-${groupId}-${categoryId}-${taskId}`);
+
+                    if (data.last_run) {
+                        statusEl.innerHTML = `<span class="status-done">已完成</span>`;
+                        cardEl.classList.add('completed');
+                    }
+                });
+        }
+
+        // 選擇題目
+        function selectTask(groupId, categoryId, taskId) {
+            groupState[groupId].categoryId = categoryId;
+            groupState[groupId].taskId = taskId;
+
+            // 載入題目資料
+            fetch(`/python_playground/get_task/${groupId}/${categoryId}/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById(`current-task-text-${groupId}`).textContent = data.task;
+                    document.getElementById(`code-${groupId}`).value = data.code || '';
+                    document.getElementById(`output-${groupId}`).textContent = data.output || '';
+                    document.getElementById(`last-run-${groupId}`).textContent =
+                        data.last_run ? `最後執行: ${data.last_run}` : '';
+
+                    document.getElementById(`tasks-area-${groupId}`).style.display = 'none';
+                    document.getElementById(`editor-area-${groupId}`).style.display = 'block';
+                });
+        }
+
+        // 返回題目列表
+        function backToTasks(groupId) {
+            // 自動儲存
+            const code = document.getElementById(`code-${groupId}`).value;
+            if (code.trim() && groupState[groupId].categoryId && groupState[groupId].taskId) {
+                saveCode(groupId);
+            }
+
+            document.getElementById(`tasks-area-${groupId}`).style.display = 'block';
+            document.getElementById(`editor-area-${groupId}`).style.display = 'none';
+
+            // 重新載入題目狀態
+            loadCategory(groupId, groupState[groupId].categoryId);
+        }
+
+        // 執行程式碼
+        function runCode(groupId) {
+            const { categoryId, taskId } = groupState[groupId];
+            if (!categoryId || !taskId) return;
+
+            const code = document.getElementById(`code-${groupId}`).value;
+            const outputArea = document.getElementById(`output-${groupId}`);
+
+            if (!code.trim()) {
+                outputArea.textContent = '[提示] 請先輸入程式碼！';
+                return;
+            }
+
+            outputArea.textContent = '正在執行程式碼...';
+
+            fetch(`/python_playground/run/${groupId}/${categoryId}/${taskId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                outputArea.textContent = data.output || '（無輸出）';
+                document.getElementById(`last-run-${groupId}`).textContent =
+                    `最後執行: ${data.last_run}`;
+                updateGroupBadge(groupId);
+            })
+            .catch(error => {
+                outputArea.textContent = `[錯誤] ${error.message}`;
+            });
+        }
+
+        // 儲存程式碼
+        function saveCode(groupId) {
+            const { categoryId, taskId } = groupState[groupId];
+            if (!categoryId || !taskId) return;
+
+            const code = document.getElementById(`code-${groupId}`).value;
+
+            fetch(`/python_playground/save/${groupId}/${categoryId}/${taskId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code })
+            });
+        }
+
+        // 清除程式碼
+        function clearCode(groupId) {
+            if (!confirm('確定要清除程式碼嗎？')) return;
+
+            document.getElementById(`code-${groupId}`).value = '';
+            document.getElementById(`output-${groupId}`).textContent = '';
+        }
+
+        // 更新組別完成數量徽章
+        function updateGroupBadge(groupId) {
+            fetch('/python_playground/get_group_summary')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById(`badge-${groupId}`);
+                    if (badge && data[groupId]) {
+                        badge.textContent = `${data[groupId].completed} / ${data[groupId].total} 題`;
+                    }
+                });
+        }
+
+        // 初始化載入所有組別的完成狀況
+        function initBadges() {
+            fetch('/python_playground/get_group_summary')
+                .then(response => response.json())
+                .then(data => {
+                    for (let groupId = 1; groupId <= 6; groupId++) {
+                        const badge = document.getElementById(`badge-${groupId}`);
+                        if (badge && data[groupId]) {
+                            badge.textContent = `${data[groupId].completed} / ${data[groupId].total} 題`;
+                        }
+                    }
+                });
+        }
+
+        // Ctrl+Enter 快捷鍵執行
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.key === 'Enter') {
+                const activeElement = document.activeElement;
+                if (activeElement && activeElement.classList.contains('code-editor')) {
+                    const groupId = parseInt(activeElement.id.replace('code-', ''));
+                    runCode(groupId);
+                }
+            }
+        });
+
+        // Tab 鍵支援
+        document.querySelectorAll('.code-editor').forEach(editor => {
+            editor.addEventListener('keydown', function(event) {
+                if (event.key === 'Tab') {
+                    event.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 4;
+                }
+            });
+        });
+
+        // 自動儲存（每 30 秒）
+        setInterval(function() {
+            for (let groupId = 1; groupId <= 6; groupId++) {
+                const code = document.getElementById(`code-${groupId}`).value;
+                if (code.trim() && groupState[groupId].categoryId && groupState[groupId].taskId) {
+                    saveCode(groupId);
+                }
+            }
+        }, 30000);
+
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initBadges();
+            document.querySelectorAll('.code-editor').forEach(editor => {
+                editor.setAttribute('spellcheck', 'false');
+            });
+        });
+    </script>
 </body>
 </html>
