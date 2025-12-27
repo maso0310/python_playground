@@ -58,6 +58,7 @@ class InteractiveSession:
         self.is_running = False
         self.waiting_for_input = False
         self.reader_thread = None
+        self.start_time = None
 
     def start(self):
         """啟動互動式程序"""
@@ -65,6 +66,11 @@ class InteractiveSession:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
             f.write(self.code)
             self.temp_file = f.name
+
+        # 設定 Windows 特有的標誌
+        creationflags = 0
+        if sys.platform == 'win32':
+            creationflags = subprocess.CREATE_NO_WINDOW
 
         # 啟動程序
         self.process = subprocess.Popen(
@@ -74,10 +80,12 @@ class InteractiveSession:
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            cwd=os.path.dirname(self.temp_file)
+            cwd=os.path.dirname(self.temp_file),
+            creationflags=creationflags
         )
 
         self.is_running = True
+        self.start_time = time.time()
 
         # 啟動讀取輸出的線程
         self.reader_thread = threading.Thread(target=self._read_output, daemon=True)
@@ -88,17 +96,19 @@ class InteractiveSession:
     def _read_output(self):
         """在背景線程中讀取程序輸出"""
         try:
-            while self.is_running and self.process.poll() is None:
+            while self.is_running:
+                if self.process.poll() is not None:
+                    # 程序已結束，讀取剩餘輸出
+                    remaining = self.process.stdout.read()
+                    if remaining:
+                        self.output_queue.put(remaining)
+                        self.output_history.append(remaining)
+                    break
+
                 line = self.process.stdout.readline()
                 if line:
                     self.output_queue.put(line)
                     self.output_history.append(line)
-
-            # 讀取剩餘的輸出
-            remaining = self.process.stdout.read()
-            if remaining:
-                self.output_queue.put(remaining)
-                self.output_history.append(remaining)
 
         except Exception as e:
             self.output_queue.put(f"\n[系統錯誤] {str(e)}\n")
@@ -133,7 +143,20 @@ class InteractiveSession:
     def is_active(self):
         """檢查程序是否仍在運行"""
         if self.process:
-            return self.process.poll() is None
+            poll_result = self.process.poll()
+
+            # 程式還在運行
+            if poll_result is None:
+                return True
+
+            # 如果背景線程還在運行，也算是活躍
+            if self.is_running:
+                return True
+
+            # 程式剛啟動不久（3秒內），即使 poll 返回非 None 也視為可能還在運行
+            if hasattr(self, 'start_time') and (time.time() - self.start_time) < 3:
+                return True
+
         return False
 
     def stop(self):
@@ -244,12 +267,13 @@ def interactive_start(group_id):
         interactive_sessions[group_id] = session
 
         # 等待一下讓程序有機會輸出
-        time.sleep(0.1)
+        time.sleep(0.3)
 
         return jsonify({
             "success": True,
             "message": "互動模式已啟動",
-            "output": session.get_output()
+            "output": session.get_output(),
+            "running": session.is_active()
         })
     except Exception as e:
         return jsonify({"error": f"啟動失敗: {str(e)}"}), 500
@@ -293,11 +317,17 @@ def interactive_output(group_id):
         return jsonify({"error": "互動模式未啟動", "running": False})
 
     session = interactive_sessions[group_id]
+    is_running = session.is_active()
+
+    # 如果程式剛啟動（2秒內），即使 poll 返回非 None 也視為運行中
+    # 這是為了處理 Windows 上的一些特殊情況
+    if session.is_running:
+        is_running = True
 
     return jsonify({
         "output": session.get_output(),
         "full_output": session.get_full_output(),
-        "running": session.is_active()
+        "running": is_running
     })
 
 

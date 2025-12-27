@@ -96,6 +96,7 @@ function startInteractive(groupId) {
     .then(data => {
         if (data.success) {
             interactiveState[groupId].active = true;
+            interactiveState[groupId].startTime = Date.now();
 
             // 更新 UI
             interactiveBtn.textContent = '停止互動';
@@ -110,10 +111,14 @@ function startInteractive(groupId) {
             // 顯示初始輸出
             outputArea.textContent = data.output || '';
 
-            // 開始輪詢輸出
-            interactiveState[groupId].pollInterval = setInterval(() => {
-                pollInteractiveOutput(groupId);
-            }, 500);
+            // 延遲一秒後才開始輪詢，給程式足夠時間準備
+            setTimeout(() => {
+                if (interactiveState[groupId].active) {
+                    interactiveState[groupId].pollInterval = setInterval(() => {
+                        pollInteractiveOutput(groupId);
+                    }, 800);
+                }
+            }, 1000);
 
             // 自動聚焦輸入框
             document.getElementById(`interactive-text-${groupId}`).focus();
@@ -183,9 +188,11 @@ function sendInteractiveInput(groupId) {
             outputArea.textContent += data.output;
         }
 
-        if (data.finished || !data.running) {
-            // 程式已結束
-            stopInteractive(groupId);
+        // 延遲一點再檢查是否結束，避免誤判
+        if (data.finished) {
+            setTimeout(() => {
+                stopInteractive(groupId);
+            }, 500);
         }
 
         // 自動滾動到底部
@@ -215,9 +222,14 @@ function pollInteractiveOutput(groupId) {
                 outputArea.scrollTop = outputArea.scrollHeight;
             }
 
-            if (!data.running) {
+            // 只有在啟動超過 2 秒後，且程式確實結束時才自動停止
+            const elapsed = Date.now() - (interactiveState[groupId].startTime || 0);
+            if (!data.running && elapsed > 2000) {
                 stopInteractive(groupId);
             }
+        })
+        .catch(error => {
+            console.error('輪詢錯誤:', error);
         });
 }
 
