@@ -24,7 +24,7 @@
         <label for="mobile-group-select">選擇組別：</label>
         <select id="mobile-group-select" onchange="scrollToGroup(this.value)">
             {% for group_id in range(1, 7) %}
-            <option value="{{ group_id }}">第 {{ group_id }} 組 - {{ group_names[group_id] }}</option>
+            <option value="{{ group_id }}">第 {{ group_id }} 組</option>
             {% endfor %}
         </select>
     </div>
@@ -33,10 +33,7 @@
         {% for group_id in range(1, 7) %}
         <section class="group-section" id="group-{{ group_id }}">
             <div class="group-title">
-                <div class="group-title-left">
-                    <h2>第 {{ group_id }} 組</h2>
-                    <span class="group-category">{{ group_names[group_id] }}</span>
-                </div>
+                <h2>第 {{ group_id }} 組</h2>
                 <span class="completed-badge" id="badge-{{ group_id }}">0 / 6 題</span>
             </div>
 

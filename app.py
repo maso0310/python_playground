@@ -14,16 +14,6 @@ from datetime import datetime
 
 real_app = Flask(__name__)
 
-# 各組的題目類別名稱（每組難度相同：2簡單 + 2中等 + 2困難）
-GROUP_NAMES = {
-    1: "第1組",
-    2: "第2組",
-    3: "第3組",
-    4: "第4組",
-    5: "第5組",
-    6: "第6組"
-}
-
 # 各組的題目（每組 6 題：2簡單 + 2中等 + 2困難，互不重複）
 GROUP_TASKS = {
     1: {  # 第 1 組：紅隊
@@ -1093,7 +1083,6 @@ def index():
     """主頁面 - 顯示六個組別的練習區"""
     return render_template(
         "index.html",
-        group_names=GROUP_NAMES,
         group_tasks=GROUP_TASKS,
         groups_data=groups_data
     )
@@ -1182,7 +1171,6 @@ def save_code(group_id, task_id):
 def get_all_data():
     """取得所有組別的所有資料"""
     return jsonify({
-        "group_names": GROUP_NAMES,
         "group_tasks": GROUP_TASKS,
         "groups_data": groups_data
     })
@@ -1208,7 +1196,6 @@ def browse():
     """瀏覽所有組別的成果"""
     return render_template(
         "browse.html",
-        group_names=GROUP_NAMES,
         group_tasks=GROUP_TASKS,
         groups_data=groups_data
     )
