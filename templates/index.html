@@ -19,25 +19,40 @@
         </nav>
     </header>
 
-    <!-- 組別選擇器（手機版顯示在最上方） -->
-    <div class="group-selector-mobile">
-        <label for="mobile-group-select">選擇組別：</label>
-        <select id="mobile-group-select" onchange="scrollToGroup(this.value)">
-            {% for group_id in range(1, 7) %}
-            <option value="{{ group_id }}">第 {{ group_id }} 組</option>
-            {% endfor %}
-        </select>
-    </div>
 
-    <main class="playground-container" id="playground-container">
+    <!-- 組別選單（初始畫面） -->
+    <main class="group-menu" id="group-menu">
+        <div class="menu-header">
+            <h2>選擇組別開始練習</h2>
+            <p>共 6 組，每組 18 題</p>
+        </div>
+        <div class="group-cards">
+            {% for group_id in range(1, 7) %}
+            <div class="group-card" onclick="selectGroup({{ group_id }})">
+                <div class="group-card-icon">{{ group_id }}</div>
+                <div class="group-card-info">
+                    <h3>第 {{ group_id }} 組</h3>
+                    <span class="group-card-progress" id="menu-badge-{{ group_id }}">0 / 18 題</span>
+                </div>
+                <div class="group-card-arrow">→</div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- 題目列表區（點選組別後顯示） -->
+    <main class="playground-container" id="playground-container" style="display: none;">
         {% for group_id in range(1, 7) %}
-        <section class="group-section" id="group-{{ group_id }}">
-            <div class="group-title">
-                <h2>第 {{ group_id }} 組</h2>
+        <section class="group-section" id="group-{{ group_id }}" style="display: none;">
+            <div class="group-title" onclick="backToMenu()">
+                <div class="group-title-left">
+                    <span class="back-arrow">←</span>
+                    <h2>第 {{ group_id }} 組</h2>
+                </div>
                 <span class="completed-badge" id="badge-{{ group_id }}">0 / 18 題</span>
             </div>
 
-            <!-- 題目列表（預設顯示） -->
+            <!-- 題目列表 -->
             <div class="tasks-list" id="tasks-list-{{ group_id }}">
                 {% for task_id, task_text in group_tasks[group_id].items() %}
                 <div class="task-card" id="task-card-{{ group_id }}-{{ task_id }}">
@@ -144,12 +159,67 @@
             }
         }
 
-        // 滾動到指定組別
-        function scrollToGroup(groupId) {
-            const el = document.getElementById(`group-${groupId}`);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 當前選擇的組別
+        let currentGroup = null;
+
+        // 選擇組別（從選單進入題目列表）
+        function selectGroup(groupId) {
+            currentGroup = groupId;
+
+            // 隱藏選單，顯示題目區
+            document.getElementById('group-menu').style.display = 'none';
+            document.getElementById('playground-container').style.display = 'block';
+
+            // 顯示選中的組別
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`group-${i}`).style.display = (i === groupId) ? 'block' : 'none';
             }
+
+            // 載入該組的狀態
+            loadGroupTaskStatus(groupId);
+
+            // 滾動到頂部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 返回組別選單
+        function backToMenu() {
+            currentGroup = null;
+
+            // 隱藏題目區，顯示選單
+            document.getElementById('playground-container').style.display = 'none';
+            document.getElementById('group-menu').style.display = 'block';
+
+            // 更新選單上的進度
+            updateMenuBadges();
+
+            // 滾動到頂部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 更新選單上的進度徽章
+        function updateMenuBadges() {
+            fetch('/python_playground/get_group_summary')
+                .then(response => response.json())
+                .then(data => {
+                    for (let groupId = 1; groupId <= 6; groupId++) {
+                        const menuBadge = document.getElementById(`menu-badge-${groupId}`);
+                        if (menuBadge && data[groupId]) {
+                            menuBadge.textContent = `${data[groupId].completed} / ${data[groupId].total} 題`;
+                            // 如果全部完成，加上特殊樣式
+                            if (data[groupId].completed === data[groupId].total) {
+                                menuBadge.classList.add('all-done');
+                            } else {
+                                menuBadge.classList.remove('all-done');
+                            }
+                        }
+                    }
+                });
+        }
+
+        // 滾動到指定組別（手機版選單用）
+        function scrollToGroup(groupId) {
+            selectGroup(groupId);
         }
 
         // 開啟編輯器
@@ -168,29 +238,20 @@
                         data.last_run ? `最後執行: ${data.last_run}` : '';
                 });
 
-            // 隱藏其他組別，展開當前組別的編輯器
-            for (let i = 1; i <= 6; i++) {
-                const section = document.getElementById(`group-${i}`);
-                const tasksList = document.getElementById(`tasks-list-${i}`);
-                const editor = document.getElementById(`editor-${i}`);
+            // 隱藏題目列表，顯示編輯器
+            const section = document.getElementById(`group-${groupId}`);
+            const tasksList = document.getElementById(`tasks-list-${groupId}`);
+            const editor = document.getElementById(`editor-${groupId}`);
 
-                if (i === groupId) {
-                    section.classList.add('fullscreen');
-                    tasksList.style.display = 'none';
-                    editor.style.display = 'flex';
-                } else {
-                    section.classList.add('hidden');
-                }
-            }
-
-            // 容器變成單欄
-            document.getElementById('playground-container').classList.add('single-column');
+            section.classList.add('fullscreen');
+            tasksList.style.display = 'none';
+            editor.style.display = 'flex';
 
             // 滾動到頂部
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 關閉編輯器
+        // 關閉編輯器（返回題目列表）
         function closeEditor(groupId) {
             // 自動儲存
             const code = document.getElementById(`code-${groupId}`).value;
@@ -198,22 +259,20 @@
                 saveCode(groupId, currentEditor.taskId);
             }
 
-            // 恢復所有組別顯示
-            for (let i = 1; i <= 6; i++) {
-                const section = document.getElementById(`group-${i}`);
-                const tasksList = document.getElementById(`tasks-list-${i}`);
-                const editor = document.getElementById(`editor-${i}`);
+            // 恢復當前組別的題目列表
+            const section = document.getElementById(`group-${groupId}`);
+            const tasksList = document.getElementById(`tasks-list-${groupId}`);
+            const editor = document.getElementById(`editor-${groupId}`);
 
-                section.classList.remove('fullscreen', 'hidden');
-                tasksList.style.display = 'grid';
-                editor.style.display = 'none';
-            }
-
-            // 容器恢復雙欄
-            document.getElementById('playground-container').classList.remove('single-column');
+            section.classList.remove('fullscreen');
+            tasksList.style.display = 'grid';
+            editor.style.display = 'none';
 
             // 重新載入題目狀態
             loadGroupTaskStatus(groupId);
+
+            // 滾動到頂部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
             currentEditor = { groupId: null, taskId: null };
         }
@@ -309,11 +368,19 @@
                 .then(response => response.json())
                 .then(data => {
                     for (let groupId = 1; groupId <= 6; groupId++) {
+                        // 更新題目列表頁的徽章
                         const badge = document.getElementById(`badge-${groupId}`);
                         if (badge && data[groupId]) {
                             badge.textContent = `${data[groupId].completed} / ${data[groupId].total} 題`;
                         }
-                        loadGroupTaskStatus(groupId);
+                        // 更新選單頁的徽章
+                        const menuBadge = document.getElementById(`menu-badge-${groupId}`);
+                        if (menuBadge && data[groupId]) {
+                            menuBadge.textContent = `${data[groupId].completed} / ${data[groupId].total} 題`;
+                            if (data[groupId].completed === data[groupId].total) {
+                                menuBadge.classList.add('all-done');
+                            }
+                        }
                     }
                 });
         }

@@ -173,19 +173,128 @@ nav a.active {
     color: white;
 }
 
+/* ==================== */
+/* 組別選單（初始畫面）  */
+/* ==================== */
+.group-menu {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.menu-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.menu-header h2 {
+    color: white;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.menu-header p {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.group-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.group-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--card-bg);
+    padding: 1rem 1.25rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--box-shadow);
+}
+
+.group-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--box-shadow-lg);
+}
+
+.group-card:active {
+    transform: translateY(0);
+}
+
+.group-card-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--secondary-color), #8b5cf6);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.group-card-info {
+    flex: 1;
+}
+
+.group-card-info h3 {
+    font-size: 1.1rem;
+    color: var(--dark-color);
+    margin-bottom: 0.25rem;
+}
+
+.group-card-progress {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.group-card-progress.all-done {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.group-card-arrow {
+    font-size: 1.25rem;
+    color: #cbd5e1;
+    transition: transform 0.2s ease;
+}
+
+.group-card:hover .group-card-arrow {
+    transform: translateX(4px);
+    color: var(--secondary-color);
+}
+
+/* 返回箭頭 */
+.group-title-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+}
+
+.back-arrow {
+    font-size: 1.25rem;
+    color: var(--secondary-color);
+    transition: transform 0.2s ease;
+}
+
+.group-title:hover .back-arrow {
+    transform: translateX(-4px);
+}
+
 /* 主容器 */
 .playground-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.25rem;
-    padding: 1.25rem;
-    max-width: 1600px;
+    padding: 1rem;
+    max-width: 800px;
     margin: 0 auto;
-    transition: all 0.3s ease;
 }
 
 .playground-container.single-column {
-    grid-template-columns: 1fr;
     max-width: 1000px;
 }
 
@@ -213,6 +322,12 @@ nav a.active {
     padding: 0.875rem 1rem;
     background: #1e293b;
     color: white;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.group-title:hover {
+    background: #334155;
 }
 
 .group-title-left {
@@ -257,14 +372,12 @@ nav a.active {
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     padding: 0.875rem;
-    cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .task-card:hover {
     border-color: var(--secondary-color);
     background: #eef2ff;
-    transform: translateY(-2px);
 }
 
 .task-card.completed {
