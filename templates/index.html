@@ -62,6 +62,7 @@
                     </div>
                     <div class="task-desc" onclick="openEditor({{ group_id }}, {{ task_id }})">{{ task_text }}</div>
                     <div class="task-card-actions">
+                        <button class="btn btn-info" onclick="showLearningPoints({{ group_id }}, {{ task_id }}, event)">詳細資訊</button>
                         <button class="btn btn-copy" onclick="copyTask({{ group_id }}, {{ task_id }}, event)">複製題目</button>
                         <button class="btn btn-start" onclick="openEditor({{ group_id }}, {{ task_id }})">開始作答</button>
                     </div>
@@ -108,6 +109,26 @@
         </section>
         {% endfor %}
     </main>
+
+    <!-- 學習重點彈窗 -->
+    <div class="modal-overlay" id="learning-modal" onclick="closeLearningModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modal-title">學習重點</h3>
+                <button class="modal-close" onclick="closeLearningModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="learning-section">
+                    <h4>學習概念</h4>
+                    <ul id="modal-concepts"></ul>
+                </div>
+                <div class="learning-section">
+                    <h4>重點提示</h4>
+                    <p id="modal-tips"></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         // 當前編輯狀態
@@ -157,6 +178,45 @@
                     button.classList.remove('copied');
                 }, 1500);
             }
+        }
+
+        // 顯示學習重點彈窗
+        function showLearningPoints(groupId, taskId, event) {
+            if (event) event.stopPropagation();
+
+            fetch(`/python_playground/learning_points/${groupId}/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('modal-title').textContent = data.title || '學習重點';
+
+                    // 填入學習概念列表
+                    const conceptsList = document.getElementById('modal-concepts');
+                    conceptsList.innerHTML = '';
+                    if (data.concepts && data.concepts.length > 0) {
+                        data.concepts.forEach(concept => {
+                            const li = document.createElement('li');
+                            li.textContent = concept;
+                            conceptsList.appendChild(li);
+                        });
+                    }
+
+                    // 填入重點提示
+                    document.getElementById('modal-tips').textContent = data.tips || '';
+
+                    // 顯示彈窗
+                    document.getElementById('learning-modal').classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                })
+                .catch(err => {
+                    alert('無法載入學習重點');
+                });
+        }
+
+        // 關閉學習重點彈窗
+        function closeLearningModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('learning-modal').classList.remove('active');
+            document.body.style.overflow = '';
         }
 
         // 當前選擇的組別
@@ -226,16 +286,25 @@
         function openEditor(groupId, taskId) {
             currentEditor = { groupId, taskId };
 
+            const codeEditor = document.getElementById(`code-${groupId}`);
+            const outputArea = document.getElementById(`output-${groupId}`);
+
             // 載入題目資料
             fetch(`/python_playground/get_task/${groupId}/${taskId}`)
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById(`editor-task-num-${groupId}`).textContent = `題目 ${taskId}`;
                     document.getElementById(`editor-task-desc-${groupId}`).textContent = data.task;
-                    document.getElementById(`code-${groupId}`).value = data.code || '';
-                    document.getElementById(`output-${groupId}`).textContent = data.output || '';
+                    codeEditor.value = data.code || '';
+                    outputArea.textContent = data.output || '';
                     document.getElementById(`last-run-${groupId}`).textContent =
                         data.last_run ? `最後執行: ${data.last_run}` : '';
+
+                    // 自動調整高度
+                    setTimeout(() => {
+                        autoResizeTextarea(codeEditor);
+                        autoResizeOutput(outputArea);
+                    }, 50);
                 });
 
             // 隱藏題目列表，顯示編輯器
@@ -309,10 +378,12 @@
 
             if (!code.trim()) {
                 outputArea.textContent = '[提示] 請先輸入程式碼！';
+                autoResizeOutput(outputArea);
                 return;
             }
 
             outputArea.textContent = '正在執行程式碼...';
+            outputArea.style.height = 'auto';
 
             fetch(`/python_playground/run/${groupId}/${taskId}`, {
                 method: 'POST',
@@ -325,9 +396,12 @@
                 document.getElementById(`last-run-${groupId}`).textContent =
                     `最後執行: ${data.last_run}`;
                 updateGroupBadge(groupId);
+                // 自動調整輸出區域高度
+                setTimeout(() => autoResizeOutput(outputArea), 10);
             })
             .catch(error => {
                 outputArea.textContent = `[錯誤] ${error.message}`;
+                autoResizeOutput(outputArea);
             });
         }
 
@@ -405,6 +479,8 @@
                 const end = editor.selectionEnd;
                 editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
                 editor.selectionStart = editor.selectionEnd = start + 4;
+                // 調整高度
+                autoResizeTextarea(editor);
             }
         });
 
@@ -418,11 +494,59 @@
             }
         }, 30000);
 
+        // 自動調整 textarea 高度
+        function autoResizeTextarea(textarea) {
+            if (!textarea) return;
+
+            // 暫時設為 auto 以取得正確的 scrollHeight
+            textarea.style.height = 'auto';
+
+            // 計算新高度（加上一些緩衝空間）
+            const minHeight = 200;
+            const maxHeight = window.innerHeight * 0.7;
+            let newHeight = Math.max(minHeight, textarea.scrollHeight);
+            newHeight = Math.min(newHeight, maxHeight);
+
+            textarea.style.height = newHeight + 'px';
+
+            // 如果內容超過最大高度，顯示滾動條
+            if (textarea.scrollHeight > maxHeight) {
+                textarea.style.overflowY = 'auto';
+            } else {
+                textarea.style.overflowY = 'hidden';
+            }
+        }
+
+        // 自動調整輸出區域高度
+        function autoResizeOutput(outputEl) {
+            if (!outputEl) return;
+
+            // 重設高度以取得正確的 scrollHeight
+            outputEl.style.height = 'auto';
+
+            const minHeight = 100;
+            const maxHeight = window.innerHeight * 0.5;
+            let newHeight = Math.max(minHeight, outputEl.scrollHeight);
+            newHeight = Math.min(newHeight, maxHeight);
+
+            outputEl.style.height = newHeight + 'px';
+        }
+
         // 頁面載入時初始化
         document.addEventListener('DOMContentLoaded', function() {
             initAll();
             document.querySelectorAll('.code-editor-full').forEach(editor => {
                 editor.setAttribute('spellcheck', 'false');
+
+                // 監聽輸入事件來自動調整高度
+                editor.addEventListener('input', function() {
+                    autoResizeTextarea(this);
+                });
+
+                // 監聽貼上事件
+                editor.addEventListener('paste', function() {
+                    setTimeout(() => autoResizeTextarea(this), 10);
+                });
             });
         });
     </script>

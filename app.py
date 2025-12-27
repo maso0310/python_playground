@@ -188,6 +188,12 @@ try:
 except ImportError:
     SAMPLE_ANSWERS = {}
 
+# 載入學習重點資料
+try:
+    from learning_points import LEARNING_POINTS
+except ImportError:
+    LEARNING_POINTS = {}
+
 
 def init_sample_data():
     """初始化範例答案資料"""
@@ -352,6 +358,24 @@ def clear_task(group_id, task_id):
         }
 
     return jsonify({"message": "已清除"})
+
+
+@real_app.route("/learning_points/<int:group_id>/<int:task_id>")
+def get_learning_points(group_id, task_id):
+    """取得指定題目的學習重點"""
+    if group_id not in range(1, 7):
+        return jsonify({"error": "無效的組別"}), 400
+    if task_id not in GROUP_TASKS[group_id]:
+        return jsonify({"error": "無效的題目"}), 400
+
+    if group_id in LEARNING_POINTS and task_id in LEARNING_POINTS[group_id]:
+        return jsonify(LEARNING_POINTS[group_id][task_id])
+    else:
+        return jsonify({
+            "title": "學習重點",
+            "concepts": ["尚未建立此題目的學習重點"],
+            "tips": "請稍後再試"
+        })
 
 
 # 使用 DispatcherMiddleware 將應用掛載到 /python_playground 路徑

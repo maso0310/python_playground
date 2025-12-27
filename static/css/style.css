@@ -589,18 +589,20 @@ nav a.active {
 
 .code-editor-full {
     width: 100%;
-    min-height: 250px;
-    flex: 1;
+    min-height: 200px;
+    max-height: 70vh;
     font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
     font-size: 14px;
     padding: 1rem;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
-    resize: vertical;
+    resize: none;
     background: #1e1e1e;
     color: #d4d4d4;
     line-height: 1.6;
     tab-size: 4;
+    overflow-y: hidden;
+    transition: height 0.1s ease;
 }
 
 .code-editor-full:focus {
@@ -617,14 +619,15 @@ nav a.active {
     color: #22d3ee;
     padding: 1rem;
     border-radius: 8px;
-    min-height: 120px;
-    max-height: 200px;
+    min-height: 100px;
+    max-height: 50vh;
     overflow-y: auto;
     font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
     font-size: 13px;
     white-space: pre-wrap;
     word-break: break-word;
     line-height: 1.5;
+    transition: height 0.2s ease;
 }
 
 /* ========== 成果總覽頁面 ========== */
@@ -854,6 +857,148 @@ nav a.active {
     font-size: 0.8rem;
     color: #64748b;
     text-align: right;
+}
+
+/* 學習重點彈窗 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-overlay .modal-content {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-overlay .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, var(--secondary-color), #8b5cf6);
+    color: white;
+    position: sticky;
+    top: 0;
+}
+
+.modal-overlay .modal-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.modal-overlay .modal-body {
+    padding: 1.25rem;
+}
+
+.learning-section {
+    margin-bottom: 1.25rem;
+}
+
+.learning-section:last-child {
+    margin-bottom: 0;
+}
+
+.learning-section h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e0e7ff;
+}
+
+.learning-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.learning-section li {
+    position: relative;
+    padding: 0.5rem 0.75rem 0.5rem 1.5rem;
+    background: #f8fafc;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--dark-color);
+}
+
+.learning-section li:before {
+    content: "•";
+    position: absolute;
+    left: 0.6rem;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.learning-section p {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #475569;
+    background: #fffbeb;
+    padding: 0.875rem 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #fbbf24;
+}
+
+/* 詳細資訊按鈕 */
+.btn-info {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    background: #e0e7ff;
+    color: var(--secondary-color);
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-info:hover {
+    background: #c7d2fe;
+    color: #4338ca;
 }
 
 /* 滾動條 */
