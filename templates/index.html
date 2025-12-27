@@ -28,7 +28,8 @@
             <div class="group-header">
                 <h2>第 {{ group_id }} 組</h2>
                 <div class="group-actions">
-                    <button class="btn btn-run" onclick="runCode({{ group_id }})">執行</button>
+                    <button class="btn btn-run" id="run-btn-{{ group_id }}" onclick="runCode({{ group_id }})">執行</button>
+                    <button class="btn btn-interactive" id="interactive-btn-{{ group_id }}" onclick="toggleInteractive({{ group_id }})">互動模式</button>
                     <button class="btn btn-clear" onclick="clearGroup({{ group_id }})">清除</button>
                 </div>
             </div>
@@ -44,9 +45,19 @@
                     <textarea id="code-{{ group_id }}" class="code-editor" placeholder="在這裡輸入 Python 程式碼...">{{ groups_data[group_id].code }}</textarea>
                 </div>
 
-                <div class="input-container">
+                <!-- 一般模式的輸入區 -->
+                <div class="input-container" id="batch-input-{{ group_id }}">
                     <label for="input-{{ group_id }}">輸入資料（每行對應一次 input）</label>
                     <textarea id="input-{{ group_id }}" class="input-area" placeholder="程式需要 input() 時，在這裡輸入資料...">{{ groups_data[group_id].user_input if groups_data[group_id].user_input else '' }}</textarea>
+                </div>
+
+                <!-- 互動模式的輸入區 -->
+                <div class="interactive-input-container" id="interactive-input-{{ group_id }}" style="display: none;">
+                    <label>互動輸入</label>
+                    <div class="interactive-input-row">
+                        <input type="text" id="interactive-text-{{ group_id }}" class="interactive-text" placeholder="輸入後按 Enter 送出..." onkeypress="handleInteractiveKeypress(event, {{ group_id }})">
+                        <button class="btn btn-send" onclick="sendInteractiveInput({{ group_id }})">送出</button>
+                    </div>
                 </div>
 
                 <div class="output-container">
@@ -63,6 +74,7 @@
                     尚未執行
                     {% endif %}
                 </span>
+                <span id="interactive-status-{{ group_id }}" class="interactive-status"></span>
             </div>
         </div>
         {% endfor %}
