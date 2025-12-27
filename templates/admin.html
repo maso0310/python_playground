@@ -14,6 +14,7 @@
         </div>
         <nav>
             <a href="/python_playground/">練習區</a>
+            <a href="/python_playground/overview">總覽</a>
             <a href="/python_playground/admin" class="active">管理者</a>
         </nav>
     </header>
@@ -46,7 +47,10 @@
                 <div class="task-card">
                     <div class="task-header">
                         <h3>第 {{ group_id }} 組</h3>
-                        <button class="btn btn-small btn-save" onclick="saveTask({{ group_id }})">儲存</button>
+                        <div class="task-header-actions">
+                            <span class="history-badge" id="history-badge-{{ group_id }}">歷史: {{ groups_data[group_id].history|length }}</span>
+                            <button class="btn btn-small btn-save" onclick="saveTask({{ group_id }})">更新任務</button>
+                        </div>
                     </div>
                     <textarea id="admin-task-{{ group_id }}" class="task-input">{{ groups_data[group_id].task }}</textarea>
                     <div class="task-status">
@@ -127,18 +131,30 @@
 
         function saveTask(groupId) {
             const task = document.getElementById(`admin-task-${groupId}`).value;
+
+            if (!confirm(`確定要更新第 ${groupId} 組的任務嗎？\n\n如果該組有程式碼或執行結果，將會自動儲存到歷史紀錄中。`)) {
+                return;
+            }
+
             fetch(`/python_playground/task/${groupId}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({task: task})
+                body: JSON.stringify({task: task, save_history: true})
             })
             .then(response => response.json())
             .then(data => {
-                alert(`第 ${groupId} 組任務已更新！`);
+                alert(`第 ${groupId} 組任務已更新！\n歷史紀錄數量: ${data.history_count}`);
+                // 更新歷史徽章
+                const badge = document.getElementById(`history-badge-${groupId}`);
+                if (badge) badge.textContent = `歷史: ${data.history_count}`;
             });
         }
 
         function saveAllTasks() {
+            if (!confirm('確定要更新所有組別的任務嗎？\n\n各組若有程式碼或執行結果，將會自動儲存到歷史紀錄中。')) {
+                return;
+            }
+
             const tasks = {};
             for (let i = 1; i <= 6; i++) {
                 tasks[i] = document.getElementById(`admin-task-${i}`).value;
@@ -146,11 +162,12 @@
             fetch('/python_playground/all_tasks', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({tasks: tasks})
+                body: JSON.stringify({tasks: tasks, save_history: true})
             })
             .then(response => response.json())
             .then(data => {
-                alert('所有任務已更新！');
+                alert('所有任務已更新！各組的舊任務已儲存至歷史紀錄。');
+                location.reload();
             });
         }
 

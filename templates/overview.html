@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全班總覽 - Python Playground</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>Python Playground</h1>
+            <p>全班總覽 - 各組執行狀況</p>
+        </div>
+        <nav>
+            <a href="/python_playground/">練習區</a>
+            <a href="/python_playground/overview" class="active">總覽</a>
+            <a href="/python_playground/admin">管理者</a>
+            <button class="btn btn-secondary" id="auto-refresh-btn" onclick="toggleAutoRefresh()">
+                即時同步：關閉
+            </button>
+        </nav>
+    </header>
+
+    <main class="overview-container">
+        {% for group_id in range(1, 7) %}
+        <div class="overview-card" id="overview-{{ group_id }}">
+            <div class="overview-header">
+                <h2>第 {{ group_id }} 組</h2>
+                <div class="overview-badges">
+                    <span class="badge badge-history" onclick="toggleHistory({{ group_id }})">
+                        歷史: <span id="history-count-{{ group_id }}">{{ groups_data[group_id].history|length }}</span>
+                    </span>
+                    <span class="badge {{ 'badge-success' if groups_data[group_id].last_run else 'badge-pending' }}">
+                        {{ '已執行' if groups_data[group_id].last_run else '待執行' }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="overview-body">
+                <div class="current-task">
+                    <div class="task-label">目前任務</div>
+                    <div class="task-content" id="current-task-{{ group_id }}">
+                        {{ groups_data[group_id].task or '無指派任務' }}
+                    </div>
+                </div>
+
+                <div class="current-status">
+                    <div class="status-row">
+                        <span class="status-label">程式碼:</span>
+                        <span class="status-value {{ 'has-code' if groups_data[group_id].code else '' }}" id="code-status-{{ group_id }}">
+                            {{ '已撰寫 (' + (groups_data[group_id].code.count('\n') + 1)|string + ' 行)' if groups_data[group_id].code else '尚未撰寫' }}
+                        </span>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-label">執行時間:</span>
+                        <span class="status-value" id="run-time-{{ group_id }}">
+                            {{ groups_data[group_id].last_run or '尚未執行' }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 程式碼預覽 -->
+                <div class="code-preview">
+                    <div class="preview-label">程式碼預覽</div>
+                    <pre class="preview-code" id="code-preview-{{ group_id }}">{{ groups_data[group_id].code or '（尚無程式碼）' }}</pre>
+                </div>
+
+                <!-- 執行結果預覽 -->
+                <div class="output-preview">
+                    <div class="preview-label">執行結果</div>
+                    <pre class="preview-output" id="output-preview-{{ group_id }}">{{ groups_data[group_id].output or '（尚無輸出）' }}</pre>
+                </div>
+            </div>
+
+            <!-- 歷史紀錄區塊（預設隱藏） -->
+            <div class="history-section" id="history-section-{{ group_id }}" style="display: none;">
+                <div class="history-header">
+                    <h3>歷史紀錄</h3>
+                    <button class="btn btn-small btn-secondary" onclick="toggleHistory({{ group_id }})">收起</button>
+                </div>
+                <div class="history-list" id="history-list-{{ group_id }}">
+                    {% if groups_data[group_id].history %}
+                        {% for entry in groups_data[group_id].history %}
+                        <div class="history-entry">
+                            <div class="history-task">{{ entry.task }}</div>
+                            <div class="history-time">完成於: {{ entry.completed_at }}</div>
+                            <details class="history-details">
+                                <summary>查看程式碼與輸出</summary>
+                                <div class="history-code-label">程式碼:</div>
+                                <pre class="history-code">{{ entry.code or '（無程式碼）' }}</pre>
+                                <div class="history-output-label">輸出:</div>
+                                <pre class="history-output">{{ entry.output or '（無輸出）' }}</pre>
+                            </details>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-history">尚無歷史紀錄</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </main>
+
+    <script>
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+
+        function toggleHistory(groupId) {
+            const section = document.getElementById(`history-section-${groupId}`);
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                loadHistory(groupId);
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function loadHistory(groupId) {
+            fetch(`/python_playground/history/${groupId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const listEl = document.getElementById(`history-list-${groupId}`);
+                    if (data.history && data.history.length > 0) {
+                        listEl.innerHTML = data.history.map((entry, idx) => `
+                            <div class="history-entry">
+                                <div class="history-task">${entry.task}</div>
+                                <div class="history-time">完成於: ${entry.completed_at}</div>
+                                <details class="history-details">
+                                    <summary>查看程式碼與輸出</summary>
+                                    <div class="history-code-label">程式碼:</div>
+                                    <pre class="history-code">${entry.code || '（無程式碼）'}</pre>
+                                    <div class="history-output-label">輸出:</div>
+                                    <pre class="history-output">${entry.output || '（無輸出）'}</pre>
+                                </details>
+                            </div>
+                        `).join('');
+                    } else {
+                        listEl.innerHTML = '<div class="no-history">尚無歷史紀錄</div>';
+                    }
+                });
+        }
+
+        function refreshAllData() {
+            fetch('/python_playground/get_all_data')
+                .then(response => response.json())
+                .then(data => {
+                    for (let groupId = 1; groupId <= 6; groupId++) {
+                        const group = data[groupId];
+
+                        // 更新任務
+                        const taskEl = document.getElementById(`current-task-${groupId}`);
+                        if (taskEl) taskEl.textContent = group.task || '無指派任務';
+
+                        // 更新程式碼狀態
+                        const codeStatusEl = document.getElementById(`code-status-${groupId}`);
+                        if (codeStatusEl) {
+                            if (group.code) {
+                                const lines = group.code.split('\n').length;
+                                codeStatusEl.textContent = `已撰寫 (${lines} 行)`;
+                                codeStatusEl.classList.add('has-code');
+                            } else {
+                                codeStatusEl.textContent = '尚未撰寫';
+                                codeStatusEl.classList.remove('has-code');
+                            }
+                        }
+
+                        // 更新執行時間
+                        const runTimeEl = document.getElementById(`run-time-${groupId}`);
+                        if (runTimeEl) runTimeEl.textContent = group.last_run || '尚未執行';
+
+                        // 更新程式碼預覽
+                        const codePreviewEl = document.getElementById(`code-preview-${groupId}`);
+                        if (codePreviewEl) codePreviewEl.textContent = group.code || '（尚無程式碼）';
+
+                        // 更新輸出預覽
+                        const outputPreviewEl = document.getElementById(`output-preview-${groupId}`);
+                        if (outputPreviewEl) outputPreviewEl.textContent = group.output || '（尚無輸出）';
+
+                        // 更新歷史數量
+                        const historyCountEl = document.getElementById(`history-count-${groupId}`);
+                        if (historyCountEl) historyCountEl.textContent = group.history ? group.history.length : 0;
+                    }
+                });
+        }
+
+        function toggleAutoRefresh() {
+            isAutoRefresh = !isAutoRefresh;
+            const btn = document.getElementById('auto-refresh-btn');
+
+            if (isAutoRefresh) {
+                autoRefreshInterval = setInterval(refreshAllData, 2000);
+                btn.textContent = '即時同步：開啟';
+                btn.classList.add('btn-active');
+                refreshAllData();
+            } else {
+                clearInterval(autoRefreshInterval);
+                btn.textContent = '即時同步：關閉';
+                btn.classList.remove('btn-active');
+            }
+        }
+    </script>
+</body>
+</html>

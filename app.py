@@ -16,12 +16,12 @@ real_app = Flask(__name__)
 
 # 儲存各組的程式碼和執行結果
 groups_data = {
-    1: {"code": "", "output": "", "task": "", "last_run": None},
-    2: {"code": "", "output": "", "task": "", "last_run": None},
-    3: {"code": "", "output": "", "task": "", "last_run": None},
-    4: {"code": "", "output": "", "task": "", "last_run": None},
-    5: {"code": "", "output": "", "task": "", "last_run": None},
-    6: {"code": "", "output": "", "task": "", "last_run": None},
+    1: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
+    2: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
+    3: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
+    4: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
+    5: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
+    6: {"code": "", "output": "", "task": "", "last_run": None, "history": []},
 }
 
 # 預設任務列表（靜態執行版本）
@@ -108,27 +108,62 @@ def save_code(group_id):
 
 @real_app.route("/task/<int:group_id>", methods=["POST"])
 def update_task(group_id):
-    """更新指定組別的任務"""
+    """更新指定組別的任務，並將舊任務存入歷史"""
     if group_id not in groups_data:
         return jsonify({"error": "無效的組別"}), 400
 
     data = request.get_json()
-    task = data.get("task", "")
-    groups_data[group_id]["task"] = task
+    new_task = data.get("task", "")
+    save_history = data.get("save_history", True)  # 預設儲存歷史
 
-    return jsonify({"message": "任務已更新"})
+    group = groups_data[group_id]
+
+    # 如果有舊任務且有程式碼或輸出，儲存到歷史紀錄
+    if save_history and group["task"] and (group["code"] or group["output"]):
+        history_entry = {
+            "task": group["task"],
+            "code": group["code"],
+            "output": group["output"],
+            "completed_at": group["last_run"] or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        group["history"].append(history_entry)
+
+    # 更新為新任務，清除目前的程式碼和輸出
+    group["task"] = new_task
+    group["code"] = ""
+    group["output"] = ""
+    group["last_run"] = None
+
+    return jsonify({"message": "任務已更新", "history_count": len(group["history"])})
 
 
 @real_app.route("/all_tasks", methods=["POST"])
 def update_all_tasks():
-    """批量更新所有組別的任務"""
+    """批量更新所有組別的任務，並儲存歷史"""
     data = request.get_json()
     tasks = data.get("tasks", {})
+    save_history = data.get("save_history", True)
 
     for group_id, task in tasks.items():
         gid = int(group_id)
         if gid in groups_data:
-            groups_data[gid]["task"] = task
+            group = groups_data[gid]
+
+            # 儲存歷史紀錄
+            if save_history and group["task"] and (group["code"] or group["output"]):
+                history_entry = {
+                    "task": group["task"],
+                    "code": group["code"],
+                    "output": group["output"],
+                    "completed_at": group["last_run"] or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                group["history"].append(history_entry)
+
+            # 更新任務並清除目前資料
+            group["task"] = task
+            group["code"] = ""
+            group["output"] = ""
+            group["last_run"] = None
 
     return jsonify({"message": "所有任務已更新"})
 
@@ -137,6 +172,24 @@ def update_all_tasks():
 def get_all_data():
     """取得所有組別的資料"""
     return jsonify(groups_data)
+
+
+@real_app.route("/history/<int:group_id>")
+def get_history(group_id):
+    """取得指定組別的歷史紀錄"""
+    if group_id not in groups_data:
+        return jsonify({"error": "無效的組別"}), 400
+
+    return jsonify({
+        "group_id": group_id,
+        "history": groups_data[group_id]["history"]
+    })
+
+
+@real_app.route("/overview")
+def overview():
+    """全班總覽頁面 - 查看各組執行狀況與歷史紀錄"""
+    return render_template("overview.html", groups_data=groups_data)
 
 
 @real_app.route("/admin")
