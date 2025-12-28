@@ -180,13 +180,8 @@ GROUP_TASKS = {
 groups_data = {i: {} for i in range(1, 7)}
 
 # ============================================================
-# 從 answers 模組載入預設答案（展示用，可刪除）
+# 答案功能已移除，讓學生自行練習
 # ============================================================
-try:
-    from answers import ALL_ANSWERS
-    SAMPLE_ANSWERS = ALL_ANSWERS
-except ImportError:
-    SAMPLE_ANSWERS = {}
 
 # 載入學習重點資料
 try:
@@ -195,19 +190,6 @@ except ImportError:
     LEARNING_POINTS = {}
 
 
-def init_sample_data():
-    """初始化範例答案資料"""
-    for group_id, tasks in SAMPLE_ANSWERS.items():
-        for task_id, data in tasks.items():
-            groups_data[group_id][task_id] = {
-                "code": data["code"],
-                "output": data["output"],
-                "last_run": "2024-12-28 10:00:00"
-            }
-
-
-# 啟動時載入範例資料（展示用，可刪除此行）
-init_sample_data()
 
 
 def get_group_task_data(group_id, task_id):
